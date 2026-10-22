@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>扔掉烦恼 - Throw Away Your Troubles</title>
+    <!-- 引入 Phaser 3 游戏引擎 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            font-family: 'Courier New', Courier, monospace, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 游戏容器 */
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 600px;
+            max-height: 900px;
+            background: #f7f7f7;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* UI 图层：写烦恼的信纸界面 */
+        #input-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: rgba(245, 245, 245, 0.95);
+            transition: opacity 0.3s ease;
+        }
+
+        /* 右上角多语言切换选择器 */
+        .lang-selector-wrapper {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 20;
+        }
+
+        .pixel-select {
+            background: #ffffff;
+            color: #222222;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 6px 10px;
+            border: 3px solid #222222;
+            box-shadow: 3px 3px 0px #222222;
+            outline: none;
+            cursor: pointer;
+            image-rendering: pixelated;
+        }
+
+        .pixel-select:active {
+            transform: translate(1px, 1px);
+            box-shadow: 2px 2px 0px #222222;
+        }
+
+        /* 纯正像素风纸张 */
+        .pixel-paper {
+            width: 85%;
+            height: 52%;
+            background: #ffffff;
+            border: 6px solid #222222;
+            box-shadow: 
+                8px 8px 0px #b5b5b5,
+                inset 0 0 0 4px #f2f2f2;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background-image: 
+                radial-gradient(#d0d0d0 15%, transparent 16%);
+            background-size: 16px 16px;
+        }
+
+        /* 主提示标题 */
+        .paper-heading {
+            font-size: 15px;
+            font-weight: bold;
+            color: #ff5252;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #ffe0e0;
+        }
+
+        .paper-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        /* 可输入的文本域 */
+        textarea {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 15px;
+            line-height: 24px;
+            color: #222;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: auto;
+            -webkit-user-select: auto;
+        }
+
+        /* 粉色像素风按钮 */
+        .pixel-btn {
+            margin-top: 25px;
+            padding: 12px 28px;
+            font-size: 17px;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: #ff85a2; /* 治愈粉色 */
+            border: 4px solid #222222;
+            box-shadow: 4px 4px 0px #222222;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #cb4b6e;
+            transition: transform 0.08s, box-shadow 0.08s;
+        }
+
+        .pixel-btn:hover {
+            background-color: #ff6b8d;
+        }
+
+        .pixel-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 1px 1px 0px #222222;
+        }
+
+        /* 像素渲染模式 */
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 写烦恼的 UI 覆盖层 -->
+    <div id="input-overlay">
+        <!-- 右上角语言选择器 -->
+        <div class="lang-selector-wrapper">
+            <select id="lang-select" class="pixel-select">
+                <option value="zh-CN">简体中文</option>
+                <option value="zh-TW">繁體中文</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+            </select>
+        </div>
+
+        <div class="pixel-paper">
+            <div id="ui-heading" class="paper-heading">写下坏情绪并扔掉它吧！</div>
+            <div id="ui-subtitle" class="paper-title">【写下你的烦恼】</div>
+            <textarea id="trouble-text"></textarea>
+        </div>
+        <button id="crumple-btn" class="pixel-btn"></button>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 1. 多语言配置中心 (i18n)
+// ==========================================
+const I18N_DATA = {
+    'zh-CN': {
+        heading: "写下坏情绪并扔掉它吧！",
+        subtitle: "【写下你的烦恼】",
+        placeholder: "写下让你不爽的事情、焦虑或坏情绪...",
+        btnCrumple: "揉成一团 ＞",
+        tipThrow: "按住纸团，向垃圾桶抛出！",
+        heals: [
+            "坏心情已回收！",
+            "烦恼通通清空！",
+            "今天也是美好的一天～",
+            "啪！烦恼不见啦！",
+            "生活晴朗，万物可爱！",
+            "心理垃圾已成功清理！"
+        ]
+    },
+    'zh-TW': {
+        heading: "寫下壞情緒並扔掉它吧！",
+        subtitle: "【寫下你的煩惱】",
+        placeholder: "寫下讓你不爽的事情、焦慮或壞情緒...",
+        btnCrumple: "揉成一團 ＞",
+        tipThrow: "按住紙團，向垃圾桶拋出！",
+        heals: [
+            "壞心情已回收！",
+            "煩惱通通清空！",
+            "今天也是美好的一天～",
+            "啪！煩惱不見啦！",
+            "生活晴朗，萬物可愛！",
+            "心理垃圾已成功清理！"
+        ]
+    },
+    'en': {
+        heading: "Write down bad feelings & throw them away!",
+        subtitle: "[ Express Your Troubles ]",
+        placeholder: "Write what's bugging you, your anxiety or bad mood...",
+        btnCrumple: "Crumple It Up >",
+        tipThrow: "Hold the paper ball & throw it into the bin!",
+        heals: [
+            "Bad mood recycled!",
+            "Troubles cleared!",
+            "Today is a wonderful day~",
+            "Poof! Troubles gone!",
+            "Keep smiling, stay positive!",
+            "Emotional trash disposed!"
+        ]
+    },
+    'ja': {
+        heading: "モヤモヤを書いて投げ捨てよう！",
+        subtitle: "【ストレスや悩みを書く】",
+        placeholder: "嫌なこと、不安、イライラをここに書いてね...",
+        btnCrumple: "丸める ＞",
+        tipThrow: "紙くずを掴んでゴミ箱へ投げよう！",
+        heals: [
+            "悪い気分を回収しました！",
+            "悩み解消！スッキリ！",
+            "今日も素晴らしい一日～",
+            "ストレス飛んでいけ！",
+            "ココロの掃除完了！",
+            "明日もイイコトあるよ！"
+        ]
+    },
+    'ko': {
+        heading: "나쁜 기분을 적고 던져버리세요!",
+        subtitle: "【당신의 고민을 적어보세요】",
+        placeholder: "답답한 일, 불안, 나쁜 기분을 적어보세요...",
+        btnCrumple: "구겨버리기 ＞",
+        tipThrow: "종이뭉치를 잡고 쓰레기통으로 던지세요!",
+        heals: [
+            "나쁜 기분이 수거되었습니다!",
+            "고민 깔끔히 청소 완료!",
+            "오늘도 좋은 하루 되세요～",
+            "스트레스 날아갔다!",
+            "마음의 쓰레기 배출 완료!",
+            "내일은 더 좋아질 거예요!"
+        ]
+    }
+};
+
+let currentLang = 'zh-CN';
+
+function updateLanguage(lang) {
+    currentLang = lang;
+    const data = I18N_DATA[lang] || I18N_DATA['zh-CN'];
+    
+    document.getElementById('ui-heading').innerText = data.heading;
+    document.getElementById('ui-subtitle').innerText = data.subtitle;
+    document.getElementById('trouble-text').placeholder = data.placeholder;
+    document.getElementById('crumple-btn').innerText = data.btnCrumple;
+
+    // 同步更新 Phaser 场景内的文字（如果场景已准备完毕）
+    const mainScene = game.scene ? game.scene.getScene('MainScene') : null;
+    if (mainScene && mainScene.isPaperCreated) {
+        mainScene.tipText.setText(data.tipThrow);
+    }
+}
+
+// ==========================================
+// 2. Web Audio API 音效合成器
+// ==========================================
+class SoundEffects {
+    constructor() {
+        this.ctx = null;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioCtx();
+        }
+    }
+
+    // 1. 揉纸音效：白噪音 + 低通滤波 + 快速衰减
+    playCrumpleSound() {
+        this.init();
+        if (!this.ctx) return;
+
+        const bufferSize = this.ctx.sampleRate * 0.25;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1000;
+        filter.Q.value = 1.5;
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start();
+    }
+
+    // 2. 投进垃圾桶音效：“咚”的清脆低音
+    playGoalSound() {
+        this.init();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+
+        gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.25);
+    }
+}
+
+const sounds = new SoundEffects();
+
+// ==========================================
+// 3. 像素图案绘制辅助函数
+// ==========================================
+function generatePixelTextures(scene) {
+    // 3.1 像素纸团 (32x32)
+    const paperGraphics = scene.make.graphics({x: 0, y: 0, add: false});
+    paperGraphics.fillStyle(0x333333, 1);
+    paperGraphics.fillRect(4, 4, 24, 24);
+    paperGraphics.fillStyle(0xffffff, 1);
+    paperGraphics.fillRect(6, 6, 20, 20);
+    paperGraphics.fillStyle(0xcccccc, 1);
+    paperGraphics.fillRect(8, 12, 6, 8);
+    paperGraphics.fillRect(18, 8, 4, 10);
+    paperGraphics.fillRect(12, 18, 10, 4);
+    paperGraphics.fillStyle(0x999999, 1);
+    paperGraphics.fillRect(10, 14, 4, 4);
+    paperGraphics.fillRect(20, 10, 2, 6);
+    paperGraphics.generateTexture('paperBall', 32, 32);
+
+    // 3.2 垃圾桶桶身 (90x100)
+    const binGraphics = scene.make.graphics({x: 0, y: 0, add: false});
+    binGraphics.fillStyle(0x555555, 1);
+    binGraphics.fillRect(10, 20, 70, 80);
+    binGraphics.fillStyle(0x333333, 1);
+    binGraphics.fillRect(6, 20, 78, 6);
+    binGraphics.fillRect(14, 30, 8, 65);
+    binGraphics.fillRect(41, 30, 8, 65);
+    binGraphics.fillRect(68, 30, 8, 65);
+    binGraphics.fillStyle(0x777777, 1);
+    binGraphics.fillRect(10, 20, 70, 4);
+    binGraphics.generateTexture('trashBin', 90, 100);
+
+    // 3.3 垃圾桶开口边缘层
+    const rimGraphics = scene.make.graphics({x: 0, y: 0, add: false});
+    rimGraphics.fillStyle(0x333333, 1);
+    rimGraphics.fillRect(0, 0, 90, 22);
+    rimGraphics.fillStyle(0x222222, 1);
+    rimGraphics.fillRect(6, 4, 78, 14);
+    rimGraphics.generateTexture('trashRim', 90, 22);
+}
+
+// ==========================================
+// 4. Phaser 游戏主场景
+// ==========================================
+class MainScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'MainScene' });
+    }
+
+    preload() {}
+
+    create() {
+        generatePixelTextures(this);
+
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        this.isPaperCreated = false;
+        this.isDragging = false;
+
+        // 垃圾桶放置
+        const binX = width / 2;
+        const binY = height - 120;
+
+        this.trashBin = this.add.image(binX, binY, 'trashBin').setDepth(1);
+        this.trashRim = this.add.image(binX, binY - 39, 'trashRim').setDepth(3);
+
+        // 桶口精准判定区
+        this.binZone = this.add.zone(binX, binY - 38, 60, 15);
+        this.physics.world.enable(this.binZone);
+        this.binZone.body.setAllowGravity(false);
+        this.binZone.body.moves = false;
+
+        // 场景边界
+        this.physics.world.setBounds(0, 0, width, height - 20);
+
+        // 提示文字
+        this.tipText = this.add.text(width / 2, 80, '', {
+            fontSize: '16px',
+            color: '#444444',
+            fontStyle: 'bold',
+            align: 'center',
+            wordWrap: { width: width - 40 }
+        }).setOrigin(0.5).setDepth(5);
+
+        // 触摸/鼠标事件
+        this.input.on('pointerdown', this.onDragStart, this);
+        this.input.on('pointermove', this.onDragMove, this);
+        this.input.on('pointerup', this.onDragEnd, this);
+    }
+
+    spawnPaperBall() {
+        const width = this.cameras.main.width;
+        
+        if (this.paperBall) {
+            this.paperBall.destroy();
+        }
+
+        this.paperBall = this.physics.add.sprite(width / 2, 220, 'paperBall');
+        this.paperBall.setScale(1.8);
+        this.paperBall.setDepth(2);
+        this.paperBall.setCollideWorldBounds(true);
+        this.paperBall.setBounce(0.3, 0.3);
+        
+        // --- 物理调优：小重力 + 空气阻力感 ---
+        this.paperBall.setDamping(true);
+        this.paperBall.setDrag(0.72); // 阻力增强
+        this.paperBall.body.setGravityY(180); // 小重力
+
+        this.paperBall.setInteractive();
+
+        this.isPaperCreated = true;
+        
+        const data = I18N_DATA[currentLang] || I18N_DATA['zh-CN'];
+        this.tipText.setText(data.tipThrow);
+
+        this.physics.add.overlap(this.paperBall, this.binZone, this.onGoal, null, this);
+    }
+
+    onDragStart(pointer) {
+        if (!this.isPaperCreated || !this.paperBall) return;
+
+        const dist = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.paperBall.x, this.paperBall.y);
+        if (dist < 50) {
+            this.isDragging = true;
+            this.paperBall.body.setAllowGravity(false);
+            this.paperBall.body.setVelocity(0, 0);
+            this.lastPointerX = pointer.x;
+            this.lastPointerY = pointer.y;
+            this.lastTime = this.time.now;
+        }
+    }
+
+    onDragMove(pointer) {
+        if (this.isDragging && this.paperBall) {
+            this.paperBall.x = pointer.x;
+            this.paperBall.y = pointer.y;
+        }
+    }
+
+    onDragEnd(pointer) {
+        if (this.isDragging && this.paperBall) {
+            this.isDragging = false;
+            this.paperBall.body.setAllowGravity(true);
+
+            const dt = Math.max((this.time.now - this.lastTime) / 1000, 0.01);
+            const vx = (pointer.x - this.lastPointerX) / dt;
+            const vy = (pointer.y - this.lastPointerY) / dt;
+
+            this.paperBall.body.setVelocity(
+                Phaser.Math.Clamp(vx, -600, 600),
+                Phaser.Math.Clamp(vy, -800, 600)
+            );
+        }
+    }
+
+    update(time) {
+        if (this.isDragging && this.paperBall) {
+            this.lastPointerX = this.input.activePointer.x;
+            this.lastPointerY = this.input.activePointer.y;
+            this.lastTime = time;
+        }
+    }
+
+    onGoal(paperBall) {
+        if (!this.isPaperCreated) return;
+        this.isPaperCreated = false;
+
+        sounds.playGoalSound();
+
+        // 消失动画
+        this.tweens.add({
+            targets: paperBall,
+            scaleX: 0,
+            scaleY: 0,
+            y: paperBall.y + 20,
+            duration: 200,
+            onComplete: () => {
+                paperBall.destroy();
+            }
+        });
+
+        // 垃圾桶闪烁特效
+        this.tweens.add({
+            targets: [this.trashBin, this.trashRim],
+            tint: 0xffe066,
+            yoyo: true,
+            repeat: 2,
+            duration: 100,
+            onComplete: () => {
+                this.trashBin.clearTint();
+                this.trashRim.clearTint();
+            }
+        });
+
+        // 获取对应语言的治愈文本
+        const heals = (I18N_DATA[currentLang] || I18N_DATA['zh-CN']).heals;
+        const randomText = heals[Math.floor(Math.random() * heals.length)];
+        this.tipText.setText(randomText);
+
+        this.time.delayedCall(2200, () => {
+            showInputOverlay();
+        });
+    }
+}
+
+// ==========================================
+// 5. 初始化游戏与 DOM 绑定
+// ==========================================
+const config = {
+    type: Phaser.AUTO,
+    parent: 'game-container',
+    width: Math.min(window.innerWidth, 600),
+    height: Math.min(window.innerHeight, 900),
+    backgroundColor: '#f7f7f7',
+    pixelArt: true,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 180 },
+            debug: false
+        }
+    },
+    scene: MainScene
+};
+
+const game = new Phaser.Game(config);
+
+const crumpleBtn = document.getElementById('crumple-btn');
+const inputOverlay = document.getElementById('input-overlay');
+const troubleText = document.getElementById('trouble-text');
+const langSelect = document.getElementById('lang-select');
+
+// 初始化语言显示
+updateLanguage('zh-CN');
+
+// 监听多语言切换
+langSelect.addEventListener('change', (e) => {
+    updateLanguage(e.target.value);
+});
+
+// 点击“揉成一团”按钮
+crumpleBtn.addEventListener('click', () => {
+    sounds.playCrumpleSound();
+
+    inputOverlay.style.opacity = '0';
+    setTimeout(() => {
+        inputOverlay.style.display = 'none';
+        
+        const mainScene = game.scene.getScene('MainScene');
+        if (mainScene) {
+            mainScene.spawnPaperBall();
+        }
+    }, 300);
+});
+
+function showInputOverlay() {
+    troubleText.value = '';
+    inputOverlay.style.display = 'flex';
+    setTimeout(() => {
+        inputOverlay.style.opacity = '1';
+    }, 10);
+}
+
+window.addEventListener('resize', () => {
+    if (game) {
+        game.scale.resize(Math.min(window.innerWidth, 600), Math.min(window.innerHeight, 900));
+    }
+});
+</script>
+</body>
+</html>

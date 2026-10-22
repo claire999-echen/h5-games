@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manifestation Clover - 治愈系显化自我肯定</title>
+    <!-- 引入 html2canvas 库用于生成分享卡片 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* CSS 变量定义 */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #ffdde1 0%, #ee9ca7 100%);
+            --text-color: #5a3d42;
+            --accent-green: #2ecc71;
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --card-shadow: 0 8px 32px 0 rgba(180, 105, 120, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            overflow-x: hidden;
+            position: relative;
+            color: var(--text-color);
+        }
+
+        /* 背景小闪烁像素四叶草 */
+        .bg-clovers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .bg-clover {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 
+                0 -8px 0 rgba(255,255,255,0.8),
+                -8px 0 0 rgba(255,255,255,0.8),
+                8px 0 0 rgba(255,255,255,0.8),
+                0 8px 0 rgba(255,255,255,0.8);
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
+
+        /* 顶部导航与语言选择 */
+        header {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .lang-select {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: var(--text-color);
+            font-size: 14px;
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        /* 主要交互区域 */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* 肯定语展示区域 */
+        .affirmation-container {
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .affirmation-text {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            padding: 20px 24px;
+            border-radius: 24px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            font-weight: 600;
+            color: #4a2c31;
+            box-shadow: var(--card-shadow);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .affirmation-text.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 8-bit 像素风中央大四叶草 */
+        .clover-wrapper {
+            position: relative;
+            cursor: pointer;
+            padding: 40px;
+            margin: 20px 0;
+        }
+
+        .pixel-clover {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.8)) drop-shadow(0 0 30px rgba(46, 204, 113, 0.5));
+        }
+
+        .pixel-clover .leaf-grid {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(12, 1fr);
+        }
+
+        .clover-wrapper:active .pixel-clover {
+            transform: scale(0.9);
+        }
+
+        .clover-wrapper.bounce .pixel-clover {
+            animation: bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes bounce {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .click-hint {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: rgba(90, 61, 66, 0.8);
+            font-weight: 500;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* 按钮样式 */
+        .btn {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 12px 28px;
+            border-radius: 30px;
+            color: var(--text-color);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.75);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-hidden {
+            display: none !important;
+        }
+
+        /* 粒子爆破效果 */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+            font-size: 14px;
+            animation: particle-fly 0.8s forwards ease-out;
+        }
+
+        @keyframes particle-fly {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--dx), var(--dy)) scale(0.3) rotate(360deg);
+            }
+        }
+
+        /* 弹窗通用样式（磨砂玻璃） */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid #ffffff;
+            border-radius: 28px;
+            padding: 32px 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        /* 欢迎弹窗 */
+        .welcome-modal h2 {
+            margin-bottom: 12px;
+            font-size: 1.5rem;
+            color: #4a2c31;
+        }
+
+        .welcome-modal p {
+            font-size: 0.95rem;
+            color: #6d4c52;
+            margin-bottom: 20px;
+        }
+
+        .modal-lang-select {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            border: 2px solid #f3d1d7;
+            background: #ffffff;
+            font-size: 1rem;
+            color: #4a2c31;
+            outline: none;
+            margin-bottom: 16px;
+            cursor: pointer;
+            text-align-last: center;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .name-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 16px;
+            border: 2px solid #f3d1d7;
+            background: #ffffff;
+            font-size: 1rem;
+            color: #4a2c31;
+            outline: none;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .name-input:focus {
+            border-color: #ee9ca7;
+        }
+
+        /* 分享卡片预览区域 */
+        .share-card-container {
+            background: var(--bg-gradient);
+            border-radius: 20px;
+            padding: 30px 20px;
+            margin-bottom: 20px;
+            color: #5a3d42;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+
+        .share-card-clover {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 12px auto;
+        }
+
+        .share-card-user {
+            font-size: 0.9rem;
+            font-weight: bold;
+            opacity: 0.8;
+            margin-bottom: 16px;
+        }
+
+        .share-card-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.6;
+            color: #3b1e23;
+            margin-bottom: 20px;
+        }
+
+        .share-card-footer {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            letter-spacing: 1px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-secondary {
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            box-shadow: none;
+        }
+
+        footer {
+            padding: 15px;
+            font-size: 0.8rem;
+            color: rgba(90, 61, 66, 0.6);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景散落闪烁四叶草 -->
+    <div class="bg-clovers" id="bgClovers"></div>
+
+    <!-- 顶部语言切换栏 -->
+    <header>
+        <select id="langSelect" class="lang-select">
+            <option value="zh-CN">简体中文</option>
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+        </select>
+    </header>
+
+    <!-- 主界面内容 -->
+    <main>
+        <!-- 肯定语显示框 -->
+        <div class="affirmation-container">
+            <div id="affirmationText" class="affirmation-text"></div>
+        </div>
+
+        <!-- 8-bit 像素四叶草组件 -->
+        <div class="clover-wrapper" id="cloverBtn">
+            <div class="pixel-clover">
+                <svg viewBox="0 0 16 16" width="100%" height="100%" shape-rendering="crispEdges">
+                    <rect x="3" y="1" width="3" height="1" fill="#2ecc71" />
+                    <rect x="2" y="2" width="5" height="3" fill="#2ecc71" />
+                    <rect x="3" y="2" width="2" height="1" fill="#abebc6" />
+                    <rect x="10" y="1" width="3" height="1" fill="#2ecc71" />
+                    <rect x="9" y="2" width="5" height="3" fill="#2ecc71" />
+                    <rect x="10" y="2" width="2" height="1" fill="#abebc6" />
+                    <rect x="2" y="5" width="12" height="2" fill="#27ae60" />
+                    <rect x="1" y="6" width="14" height="4" fill="#27ae60" />
+                    <rect x="2" y="10" width="5" height="3" fill="#219150" />
+                    <rect x="3" y="13" width="3" height="1" fill="#219150" />
+                    <rect x="9" y="10" width="5" height="3" fill="#219150" />
+                    <rect x="10" y="13" width="3" height="1" fill="#219150" />
+                    <rect x="7" y="10" width="2" height="3" fill="#1e8449" />
+                    <rect x="7" y="13" width="2" height="3" fill="#1e8449" />
+                </svg>
+            </div>
+        </div>
+
+        <div id="clickHint" class="click-hint">✨ 点击四叶草，接收今日显化能量 ✨</div>
+
+        <!-- 生成卡片按钮 -->
+        <button id="generateBtn" class="btn btn-hidden">
+            <span>📸</span>
+            <span id="generateBtnText">生成分享卡片</span>
+        </button>
+    </main>
+
+    <footer>Manifest Your Dreams ✨ Pure Healing Energy</footer>
+
+    <!-- 1. 欢迎/署名与语言选择弹窗 -->
+    <div id="welcomeModal" class="modal-overlay active">
+        <div class="modal-card welcome-modal">
+            <h2 id="modalTitle">欢迎来到显化空间</h2>
+            <p id="modalDesc">请选择语言并输入你的名字，开启专属治愈能量：</p>
+            
+            <!-- 弹窗内的语言选择下拉菜单 -->
+            <select id="modalLangSelect" class="modal-lang-select">
+                <option value="zh-CN">简体中文</option>
+                <option value="zh-TW">繁體中文</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+            </select>
+
+            <div class="input-group">
+                <input type="text" id="usernameInput" class="name-input" placeholder="输入名字..." maxlength="15" autocomplete="off">
+            </div>
+            <button id="startBtn" class="btn" style="width: 100%; justify-content: center;">
+                <span id="startBtnText">开始显化</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. 卡片预览/下载弹窗 -->
+    <div id="cardModal" class="modal-overlay">
+        <div class="modal-card">
+            <div id="shareCard" class="share-card-container">
+                <div class="share-card-clover">
+                    <svg viewBox="0 0 16 16" width="100%" height="100%" shape-rendering="crispEdges">
+                        <rect x="3" y="1" width="3" height="1" fill="#2ecc71" />
+                        <rect x="2" y="2" width="5" height="3" fill="#2ecc71" />
+                        <rect x="10" y="1" width="3" height="1" fill="#2ecc71" />
+                        <rect x="9" y="2" width="5" height="3" fill="#2ecc71" />
+                        <rect x="1" y="5" width="14" height="5" fill="#27ae60" />
+                        <rect x="2" y="10" width="5" height="3" fill="#219150" />
+                        <rect x="9" y="10" width="5" height="3" fill="#219150" />
+                        <rect x="7" y="10" width="2" height="6" fill="#1e8449" />
+                    </svg>
+                </div>
+                <div id="cardUser" class="share-card-user">致 某某</div>
+                <div id="cardText" class="share-card-text">肯定语内容</div>
+                <div class="share-card-footer">✨ Manifestation & Affirmation ✨</div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="closeCardBtn" class="btn btn-secondary">
+                    <span id="closeBtnText">关闭</span>
+                </button>
+                <button id="downloadBtn" class="btn">
+                    <span>📥</span>
+                    <span id="downloadBtnText">保存图片</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 多语言语料库与UI文本字典 ---
+        const i18n = {
+            'zh-CN': {
+                welcomeTitle: "欢迎来到显化空间",
+                welcomeDesc: "请选择语言并输入你的名字，开启专属治愈能量：",
+                inputPlaceholder: "输入名字...",
+                startBtn: "开始显化",
+                clickHint: "✨ 点击四叶草，接收今日显化能量 ✨",
+                generateBtn: "📸 生成分享卡片",
+                cardTo: "致 ",
+                downloadBtn: "保存图片",
+                closeBtn: "关闭",
+                quotes: [
+                    "我正在吸引宇宙中所有的丰盛与美好来到我身边。",
+                    "我的能量场非常强大，我所渴望的一切正在以最完美的方式显化。",
+                    "我完全信任生命的过程，我知道一切都在为我最好的利益而运作。",
+                    "我值得拥有爱、健康、财富和内心的平静。",
+                    "每一天，我的生活都在朝着我理想的方向飞速前进。",
+                    "我拥有创造自己现实的力量，我的思想正在塑造我的未来。",
+                    "我是幸运的磁铁，美好的机会总是源源不断地向我涌来。",
+                    "我放下所有的焦虑和限制，拥抱无限的可能性。",
+                    "我的内心充满感恩，我已经拥有了实现梦想所需的一切。",
+                    "宇宙正在为我铺路，我只需要保持内心的喜悦与平和。",
+                    "我身体的每一个细胞都充满了活力与治愈的能量。",
+                    "我是自己人生的主宰，我选择创造充满奇迹的每一天。"
+                ]
+            },
+            'zh-TW': {
+                welcomeTitle: "歡迎來到顯化空間",
+                welcomeDesc: "請選擇語言並輸入你的名字，開啟專屬治癒能量：",
+                inputPlaceholder: "輸入名字...",
+                startBtn: "開始顯化",
+                clickHint: "✨ 點擊四葉草，接收今日顯化能量 ✨",
+                generateBtn: "📸 生成分享卡片",
+                cardTo: "致 ",
+                downloadBtn: "保存圖片",
+                closeBtn: "關閉",
+                quotes: [
+                    "我正在吸引宇宙中所有的豐盛與美好來到我身邊。",
+                    "我的能量場非常強大，我所渴望的一切正在以最完美的方式顯化。",
+                    "我完全信任生命的過程，我知道一切都在為我最好的利益而運作。",
+                    "我值得擁有愛、健康、財富和內心的平靜。",
+                    "每一天，我的生活都在朝著我理想的方向飛速前進。",
+                    "我擁有創造自己現實的力量，我的思想正在塑造我的未來。",
+                    "我是幸運的磁鐵，美好的機會總是源源不斷地向我湧來。",
+                    "我放下所有的焦慮和限制，擁抱無限的可能性。",
+                    "我的內心充滿感恩，我已經擁有了實現夢想所需的一切。",
+                    "宇宙正在為我鋪路，我只需要保持內心的喜悅與平和。",
+                    "我身體的每一個細胞都充滿了活力與治癒的能量。",
+                    "我是自己人生的主宰，我選擇創造充滿奇蹟的每一天。"
+                ]
+            },
+            'en': {
+                welcomeTitle: "Welcome to Manifest Space",
+                welcomeDesc: "Select language and enter your name to unlock healing energy:",
+                inputPlaceholder: "Your name...",
+                startBtn: "Start Manifesting",
+                clickHint: "✨ Tap the clover to receive positive energy ✨",
+                generateBtn: "📸 Generate Share Card",
+                cardTo: "To ",
+                downloadBtn: "Save Image",
+                closeBtn: "Close",
+                quotes: [
+                    "I am attracting all the abundance and goodness of the universe into my life.",
+                    "My energy is powerful, and everything I desire is manifesting in the most perfect way.",
+                    "I trust the process of life completely, knowing everything is working out for my highest good.",
+                    "I am worthy of love, health, wealth, and inner peace.",
+                    "Every day, my life is moving rapidly toward my ideal reality.",
+                    "I have the power to create my own reality; my thoughts are shaping my future.",
+                    "I am a magnet for luck, and beautiful opportunities constantly flow to me.",
+                    "I release all anxiety and limitations, and I embrace infinite possibilities.",
+                    "My heart is filled with gratitude; I already have everything I need to achieve my dreams.",
+                    "The universe is paving the way for me; I just need to maintain my joy and peace.",
+                    "Every cell in my body is filled with vitality and healing energy.",
+                    "I am the master of my life, choosing to create days filled with miracles."
+                ]
+            },
+            'ja': {
+                welcomeTitle: "引き寄せの空間へようこそ",
+                welcomeDesc: "言語を選び、お名前を入力して癒しのエネルギーを解放しましょう：",
+                inputPlaceholder: "お名前...",
+                startBtn: "スタート",
+                clickHint: "✨ クローバーをタップして、ポジティブなエネルギーを受け取りましょう ✨",
+                generateBtn: "📸 シェアカードを作成",
+                cardTo: "親愛なる ",
+                downloadBtn: "画像を保存",
+                closeBtn: "閉じる",
+                quotes: [
+                    "私は宇宙の豊かさと素晴らしさを引き寄せています。",
+                    "私のエネルギーは強力で、望むすべてが完璧な形で現実化しています。",
+                    "私は人生のプロセスを完全に信頼しています。すべては私の最高の利益のために起こっています。",
+                    "私は愛、健康、富、そして心の平和を受け取る価値があります。",
+                    "毎日、私の人生は理想の方向へと急速に進んでいます。",
+                    "私は自分の現実を創造する力を持っています。私の思考が未来を形作っています。",
+                    "私は幸運の磁石です。素晴らしいチャンスが絶えず私に流れ込んできます。",
+                    "私はすべての不安と制限を手放し、無限の可能性を受け入れます。",
+                    "私の心は感謝で満たされています。夢を叶えるために必要なものはすでにすべて揃っています。",
+                    "宇宙が私のために道を切り開いています。私はただ喜びと平和を保てばいいのです。",
+                    "私の体のすべての細胞が活力と癒しのエネルギーで満ちています。",
+                    "私は人生の主導権を握っています。奇跡に満ちた毎日を創り出すことを選びます。"
+                ]
+            },
+            'ko': {
+                welcomeTitle: "끌어당김의 공간에 오신 것을 환영합니다",
+                welcomeDesc: "언어를 선택하고 이름을 입력하여 치유의 에너지를 여세요:",
+                inputPlaceholder: "이름 입력...",
+                startBtn: "시작하기",
+                clickHint: "✨ 클로버를 터치하여 긍정의 에너지를 받으세요 ✨",
+                generateBtn: "📸 공유 카드 만들기",
+                cardTo: "Dear. ",
+                downloadBtn: "이미지 저장",
+                closeBtn: "닫기",
+                quotes: [
+                    "나는 우주의 풍요로움과 아름다움을 내 삶으로 끌어당기고 있습니다.",
+                    "나의 에너지는 강력하며, 내가 바ارهای 모든 것은 가장 완벽한 방식으로 현실화되고 있습니다.",
+                    "나는 삶의 과정을 온전히 신뢰하며, 모든 일이 나의 최고의 이익을 위해 일어나고 있음을 압니다.",
+                    "나는 사랑, 건강, 부, 그리고 내면의 평화를 누릴 자격이 있습니다.",
+                    "매일 나의 삶은 내가 꿈꾸는 이상적인 방향으로 빠르게 나아가고 있습니다.",
+                    "나는 나만의 현실을 창조하는 힘을 가지고 있으며, 나의 생각이 미래를 만들어갑니다.",
+                    "나는 행운을 끄는 자석이며, 멋진 기회들이 끊임없이 나에게 찾아옵니다.",
+                    "나는 모든 불안과 한계를 내려놓고 무한한 가능성을 받아들입니다.",
+                    "나의 마음은 감사로 가득 차 있으며, 꿈을 이루기 위해 필요한 모든 것을 이미 가지고 있습니다.",
+                    "우주가 나를 위해 길을 열어주고 있습니다. 나는 그저 기쁨과 평화를 유지하면 됩니다.",
+                    "내 몸의 모든 세포는 활력과 치유의 에너지로 가득 차 있습니다.",
+                    "나는 내 인생의 주인이며, 기적이 가득한 하루를 창조하기로 선택합니다."
+                ]
+            }
+        };
+
+        // --- 2. 状态变量 ---
+        let currentLang = 'zh-CN';
+        let userName = '';
+        let currentQuoteIndex = -1;
+
+        // DOM 元素引用
+        const langSelect = document.getElementById('langSelect');
+        const modalLangSelect = document.getElementById('modalLangSelect');
+        const welcomeModal = document.getElementById('welcomeModal');
+        const usernameInput = document.getElementById('usernameInput');
+        const startBtn = document.getElementById('startBtn');
+        const cloverBtn = document.getElementById('cloverBtn');
+        const affirmationText = document.getElementById('affirmationText');
+        const generateBtn = document.getElementById('generateBtn');
+        const clickHint = document.getElementById('clickHint');
+
+        const cardModal = document.getElementById('cardModal');
+        const closeCardBtn = document.getElementById('closeCardBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const shareCard = document.getElementById('shareCard');
+        const cardUser = document.getElementById('cardUser');
+        const cardText = document.getElementById('cardText');
+
+        // --- 3. 初始化背景小四叶草 ---
+        let bgInitialized = false;
+        function createBackgroundClovers() {
+            if (bgInitialized) return;
+            bgInitialized = true;
+            const container = document.getElementById('bgClovers');
+            const count = 25;
+            for (let i = 0; i < count; i++) {
+                const clover = document.createElement('div');
+                clover.className = 'bg-clover';
+                clover.style.left = `${Math.random() * 100}%`;
+                clover.style.top = `${Math.random() * 100}%`;
+                clover.style.animationDelay = `${Math.random() * 3}s`;
+                clover.style.animationDuration = `${2 + Math.random() * 3}s`;
+                container.appendChild(clover);
+            }
+        }
+
+        // --- 4. 多语言文本更新函数 ---
+        function updateLanguage(lang) {
+            currentLang = lang;
+            const dict = i18n[lang];
+
+            // 同步两个下拉菜单的选中状态
+            langSelect.value = lang;
+            modalLangSelect.value = lang;
+
+            // 更新 UI 界面文本
+            document.getElementById('modalTitle').textContent = dict.welcomeTitle;
+            document.getElementById('modalDesc').textContent = dict.welcomeDesc;
+            usernameInput.placeholder = dict.inputPlaceholder;
+            document.getElementById('startBtnText').textContent = dict.startBtn;
+            clickHint.textContent = dict.clickHint;
+            document.getElementById('generateBtnText').textContent = dict.generateBtn;
+            document.getElementById('closeBtnText').textContent = dict.closeBtn;
+            document.getElementById('downloadBtnText').textContent = dict.downloadBtn;
+
+            // 如果当前已经显示了肯定语，立刻刷新其文本
+            if (currentQuoteIndex !== -1) {
+                const quoteText = dict.quotes[currentQuoteIndex];
+                affirmationText.textContent = `${userName}，${quoteText}`;
+            }
+        }
+
+        // --- 5. 粒子爆破效果 ---
+        function createParticles(x, y) {
+            const particleCount = 20;
+            const symbols = ['✨', '⭐', '💫', '✦', '✧', '🌸'];
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 60 + Math.random() * 80;
+                const dx = Math.cos(angle) * dist + 'px';
+                const dy = Math.sin(angle) * dist + 'px';
+
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.setProperty('--dx', dx);
+                particle.style.setProperty('--dy', dy);
+
+                document.body.appendChild(particle);
+
+                setTimeout(() => {
+                    particle.remove();
+                }, 800);
+            }
+        }
+
+        // --- 6. 事件监听与逻辑处理 ---
+
+        // 顶部语言选择切换
+        langSelect.addEventListener('change', (e) => {
+            updateLanguage(e.target.value);
+        });
+
+        // 弹窗内的语言选择切换
+        modalLangSelect.addEventListener('change', (e) => {
+            updateLanguage(e.target.value);
+        });
+
+        // 首次加载点击开始
+        startBtn.addEventListener('click', () => {
+            const inputVal = usernameInput.value.trim();
+            userName = inputVal !== '' ? inputVal : (currentLang === 'en' ? 'Friend' : '朋友');
+            welcomeModal.classList.remove('active');
+        });
+
+        // 点击中央四叶草
+        cloverBtn.addEventListener('click', (e) => {
+            cloverBtn.classList.remove('bounce');
+            void cloverBtn.offsetWidth; 
+            cloverBtn.classList.add('bounce');
+
+            const rect = cloverBtn.getBoundingClientRect();
+            const clickX = e.clientX || (rect.left + rect.width / 2);
+            const clickY = e.clientY || (rect.top + rect.height / 2);
+            createParticles(clickX, clickY);
+
+            const dict = i18n[currentLang];
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * dict.quotes.length);
+            } while (newIndex === currentQuoteIndex && dict.quotes.length > 1);
+
+            currentQuoteIndex = newIndex;
+
+            affirmationText.classList.remove('show');
+            setTimeout(() => {
+                affirmationText.textContent = `${userName}，${dict.quotes[currentQuoteIndex]}`;
+                affirmationText.classList.add('show');
+            }, 200);
+
+            generateBtn.classList.remove('btn-hidden');
+        });
+
+        // 点击生成分享卡片
+        generateBtn.addEventListener('click', () => {
+            const dict = i18n[currentLang];
+            cardUser.textContent = `${dict.cardTo}${userName}`;
+            cardText.textContent = dict.quotes[currentQuoteIndex];
+            cardModal.classList.add('active');
+        });
+
+        // 关闭卡片弹窗
+        closeCardBtn.addEventListener('click', () => {
+            cardModal.classList.remove('active');
+        });
+
+        // 保存/下载卡片图片
+        downloadBtn.addEventListener('click', () => {
+            downloadBtn.style.opacity = '0.5';
+            downloadBtn.style.pointerEvents = 'none';
+
+            html2canvas(shareCard, {
+                scale: 2,
+                backgroundColor: null,
+                useCORS: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `manifest-affirmation-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                downloadBtn.style.opacity = '1';
+                downloadBtn.style.pointerEvents = 'auto';
+            }).catch(err => {
+                console.error('Image generation failed:', err);
+                downloadBtn.style.opacity = '1';
+                downloadBtn.style.pointerEvents = 'auto';
+            });
+        });
+
+        // 初始化
+        createBackgroundClovers();
+        updateLanguage('zh-CN');
+    </script>
+</body>
+</html>
