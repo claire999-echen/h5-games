@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Clay Cake Workshop - 3D 黏土蛋糕工坊（数字评分与拍立得预览版）</title>
+    <style>
+        html, body {
+            width: 100%; height: 100%; margin: 0; padding: 0;
+            overflow: hidden !important; touch-action: none !important;
+            user-select: none; -webkit-user-select: none;
+            background: linear-gradient(135deg, #FFF9F9 0%, #FFF0F2 50%, #FFE8EC 100%);
+            font-family: "MICEGothic", "Hiragino Maru Gothic ProN", "Quicksand", sans-serif;
+            color: #6B4226;
+        }
+
+        body::before {
+            content: ""; position: absolute; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 16 16'%3E%3Cg fill='%23FFB6C1' fill-opacity='0.3'%3E%3Crect x='6' y='2' width='4' height='4'/%3E%3Crect x='2' y='6' width='4' height='4'/%3E%3Crect x='10' y='6' width='4' height='4'/%3E%3Crect x='6' y='10' width='4' height='4'/%3E%3Crect x='7' y='7' width='2' height='2' fill='%23FFFDF8' fill-opacity='0.6'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 80px 80px; background-repeat: repeat;
+            pointer-events: none; z-index: 0;
+            animation: bgDrift 40s linear infinite, bgTwinkle 4s ease-in-out infinite alternate;
+        }
+        @keyframes bgDrift { 0% { background-position: 0 0; } 100% { background-position: 800px 800px; } }
+        @keyframes bgTwinkle { 0% { opacity: 0.7; } 100% { opacity: 1; filter: drop-shadow(0 0 2px rgba(255,182,193,0.8)); } }
+
+        #webgl-container {
+            width: 100vw; height: 100vh; display: block;
+            position: absolute; top: 0; left: 0; z-index: 1;
+            touch-action: none !important; background: transparent !important;
+            pointer-events: auto !important;
+        }
+
+        #top-ui {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            z-index: 10; pointer-events: none;
+        }
+        #instruction-banner {
+            background: rgba(255, 253, 248, 0.95); border: 3px solid #FFB6C1;
+            padding: 8px 22px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;
+            color: #FF69B4; box-shadow: 0 4px 14px rgba(107, 66, 38, 0.1);
+            text-align: center; white-space: nowrap; pointer-events: auto; backdrop-filter: blur(4px);
+        }
+        #lang-select {
+            background-color: #FFFDF8; border: 2px solid #FFB6C1; color: #6B4226;
+            padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;
+            cursor: pointer; pointer-events: auto; outline: none;
+        }
+
+        #hud-container {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            z-index: 10; pointer-events: none; width: 95%; max-width: 520px;
+        }
+        #progress-box {
+            width: 100%; height: 16px; background: rgba(255, 253, 248, 0.95);
+            border: 2px solid #FFB6C1; border-radius: 10px; overflow: hidden; display: none;
+            position: relative; pointer-events: auto;
+        }
+        #progress-bar { width: 0%; height: 100%; background-color: #FF69B4; transition: width 0.1s ease; }
+
+        .btn-group {
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; pointer-events: none;
+        }
+        .action-btn {
+            background-color: #FFFDF8; border: 3px solid #FFB6C1; color: #FF69B4;
+            padding: 8px 16px; border-radius: 18px; font-size: 0.9rem; font-weight: bold;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+            pointer-events: auto; display: none; transition: transform 0.1s, background-color 0.2s, color 0.2s;
+        }
+        .action-btn:active { transform: scale(0.94); }
+        .action-btn.active-mode {
+            background-color: #FF69B4 !important;
+            color: #FFF !important;
+            box-shadow: 0 0 10px rgba(255, 105, 180, 0.6);
+        }
+        #next-step-btn { display: block; background: #FF69B4; color: #FFF; }
+
+        /* Step 9 拍立得卡片预览 UI */
+        #polaroid-modal {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.4);
+            display: none; justify-content: center; align-items: center;
+            z-index: 100; backdrop-filter: blur(5px); pointer-events: auto;
+        }
+        .polaroid-card {
+            background: #FFFDF8; padding: 22px 22px 28px 22px; border: 4px solid #FFB6C1;
+            border-radius: 16px; box-shadow: 0 15px 35px rgba(107, 66, 38, 0.2);
+            display: flex; flex-direction: column; align-items: center; gap: 12px; width: 320px;
+            animation: cardPopup 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes cardPopup {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .polaroid-frame {
+            width: 270px; height: 270px; background: #FFF; border: 3px solid #FFE4E1;
+            border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.06); position: relative;
+        }
+        .polaroid-frame img { width: 100%; height: 100%; object-fit: cover; }
+        .cake-name-display { font-size: 1.2rem; font-weight: bold; color: #6B4226; text-align: center; margin-top: 4px; }
+        .polaroid-score { font-size: 1.05rem; font-weight: bold; color: #FF69B4; text-align: center; }
+        .input-name { width: 90%; padding: 8px; border: 2px solid #FFB6C1; border-radius: 8px; text-align: center; outline: none; font-weight: bold; color: #6B4226; font-size: 0.95rem; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="webgl-container"></div>
+
+    <div id="top-ui">
+        <div id="instruction-banner">加载中...</div>
+        <select id="lang-select" onchange="Game.changeLanguage(this.value)">
+            <option value="zh-CN">简体中文</option><option value="zh-TW">繁體中文</option>
+            <option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option>
+        </select>
+    </div>
+
+    <div id="hud-container">
+        <div id="progress-box"><div id="progress-bar"></div></div>
+        <div class="btn-group" id="dynamic-btn-group"></div>
+        <button class="action-btn" id="next-step-btn" onclick="Game.nextStep()">✨ 进入下一步</button>
+    </div>
+
+    <!-- Step 9 结算拍立得卡片预览弹窗 -->
+    <div id="polaroid-modal">
+        <div class="polaroid-card">
+            <div class="polaroid-frame" id="polaroid-img-container">
+                <!-- 3D 蛋糕截图将在此呈现 -->
+            </div>
+            <input type="text" class="input-name" id="cake-name-input" placeholder="请给蛋糕起个名字吧..." oninput="Game.updateCardName(this.value)" />
+            <div class="cake-name-display" id="display-cake-name">我的专属蛋糕</div>
+            <div class="polaroid-score" id="score-display">⭐ 甜品大师评分：99 / 100</div>
+            <button class="action-btn" style="display:block; width:100%; background:#FF69B4; color:#FFF;" onclick="Game.restartGame()">🔄 再做一次</button>
+        </div>
+    </div>
+
+    <script>
+        const I18N = {
+            'zh-CN': {
+                s1: "Step 1: 点击依次打碎 3 颗鸡蛋！", s1_prog: "已打碎鸡蛋: {n}/3", s1_done: "✨ 3颗鸡蛋已全部打入碗中！",
+                s2: "Step 2: 请逐个拖拽蛋黄到右侧小碗中分离！", s2_prog: "已分离：{n}/3", s2_done: "✨ 3个蛋黄全部成功分离！",
+                s3: "点击下方按钮选择打发，【狂点/疯狂画圈可以加速并强化打发效果！】", s3_done: "✨ 蛋黄与蛋白双向打发完成！",
+                s4_init: "Step 4: 点击按钮将面粉和牛奶倒入大碗！", s4_stir: "Step 4: 拖拽搅拌器在碗中画圈搅拌 8 下！", s4_done: "✨ 面糊已均匀混合！",
+                s5: "Step 5: 选择你喜爱的蛋糕风味材质！",
+                s6_ready: "Step 6: 点击【放入烤箱】开始烘焙！", s6_baking: "正在烘焙... {n}s", s6_perfect: "✨ 蛋糕烤好了！快点击取出！", s6_burnt: "🔥 烤糊了！可以随时点击取出！", s6_done: "✨ 烘焙完成！点击【取出蛋糕】", s6_out: "✨ 蛋糕出炉！",
+                s7: "Step 7: 点击奶油并在其上拖拽手动平铺它！", s7_done: "✨ 奶油抹平完成！点击盖上",
+                s8: "Step 8: 自由装饰！滑动旋转视角，选择工具后在蛋糕表面点击放置或滑动绘制。",
+                s9: "Step 9: 制作完成！查看你的拍立得甜品大师评分卡片。",
+                placeholder: "请给蛋糕起个名字吧...",
+                default_name: "我的专属蛋糕",
+                score_title: "⭐ 甜品大师评分",
+                btn_next: "✨ 进入下一步", btn_step2: "🥣 开始分离蛋黄 ➡", btn_oven_in: "🚪 放入烤箱", btn_oven_out: "🔔 取出蛋糕", btn_cover: "📦 盖上顶层", btn_cream: "🍦 平铺奶油夹心"
+            },
+            'en': {
+                s1: "Step 1: Click to crack 3 eggs one by one!", s1_prog: "Cracked: {n}/3", s1_done: "✨ All 3 eggs cracked into the bowl!",
+                s2: "Step 2: Drag yolks one by one to the side bowl!", s2_prog: "Separated: {n}/3", s2_done: "✨ All 3 yolks separated successfully!",
+                s3: "Click button to select, [Click rapidly or circle to boost whipping!]", s3_done: "✨ Whipping complete!",
+                s4_init: "Step 4: Pour flour & milk into bowl!", s4_stir: "Step 4: Drag whisk to stir 8 times!", s4_done: "✨ Batter mixed!",
+                s5: "Step 5: Choose cake flavor!",
+                s6_ready: "Step 6: Click [Put in Oven] to bake!", s6_baking: "Baking... {n}s", s6_perfect: "✨ Cake is ready! Click Take Out!", s6_burnt: "🔥 Burnt! Take out anytime!", s6_done: "✨ Baked! Click [Take Out]", s6_out: "✨ Cake ready!",
+                s7: "Step 7: Click cream & drag to smooth it out!", s7_done: "✨ Cream smoothed! Cover top",
+                s8: "Step 8: Decorate! Rotate view, click tool & click/drag on cake surface.",
+                s9: "Step 9: Complete! Check out your Polaroid Master Score card.",
+                placeholder: "Name your cake...",
+                default_name: "My Special Cake",
+                score_title: "⭐ Master Chef Score",
+                btn_next: "✨ Next Step", btn_step2: "🥣 Separate Yolks ➡", btn_oven_in: "🚪 Put in Oven", btn_oven_out: "🔔 Take Out", btn_cover: "📦 Cover Top", btn_cream: "🍦 Smooth Cream"
+            },
+            'zh-TW': {
+                s1: "Step 1: 點擊依序打碎 3 顆雞蛋！", s1_prog: "已打碎雞蛋: {n}/3", s1_done: "✨ 3顆雞蛋已全部打入碗中！",
+                s2: "Step 2: 請逐個拖拽蛋黃到右側小碗中分離！", s2_prog: "已分離：{n}/3", s2_done: "✨ 3個蛋黃全部成功分離！",
+                s3: "點擊下方按鈕選擇打發，【狂點/瘋狂畫圈可以加速並強化打發效果！】", s3_done: "✨ 蛋黃與蛋白雙向打發完成！",
+                s4_init: "Step 4: 點擊按鈕將麵粉和牛奶倒入大碗！", s4_stir: "Step 4: 拖拽攪拌器在碗中畫圈攪拌 8 下！", s4_done: "✨ 麵糊已均勻混合！",
+                s5: "Step 5: 選擇你喜愛的蛋糕風味材質！",
+                s6_ready: "Step 6: 點擊【放入烤箱】開始烘焙！", s6_baking: "正在烘焙... {n}s", s6_perfect: "✨ 蛋糕烤好了！快點擊取出！", s6_burnt: "🔥 烤糊了！可以隨時點擊取出！", s6_done: "✨ 烘焙完成！點擊【取出蛋糕】", s6_out: "✨ 蛋糕出爐！",
+                s7: "Step 7: 點擊奶油並在其上拖拽手動平鋪它！", s7_done: "✨ 奶油抹平完成！點擊蓋上",
+                s8: "Step 8: 自由裝飾！滑動旋轉視角，選擇工具後在蛋糕表面點擊放置或滑動繪製。",
+                s9: "Step 9: 制作完成！查看你的拍立得甜品大師評分卡片。",
+                placeholder: "請給蛋糕起個名字吧...",
+                default_name: "我的專屬蛋糕",
+                score_title: "⭐ 甜品大師評分",
+                btn_next: "✨ 進入下一步", btn_step2: "🥣 開始分離蛋黃 ➡", btn_oven_in: "🚪 放入烤箱", btn_oven_out: "🔔 取出蛋糕", btn_cover: "📦 蓋上頂層", btn_cream: "🍦 平鋪奶油夾心"
+            },
+            'ja': {
+                s1: "Step 1: 卵を3つ順番に割ろう！", s1_prog: "割った卵: {n}/3", s1_done: "✨ 3つの卵が入りました！",
+                s2: "Step 2: 卵黄を1つずつ右のボウルへ移動させよう！", s2_prog: "分離：{n}/3", s2_done: "✨ 3つの分離成功！",
+                s3: "ボタンで選択し、連打や円を描いて泡立てを強化しよう！", s3_done: "✨ 完了！",
+                s4_init: "Step 4: 粉と牛乳をいれよう！", s4_stir: "Step 4: 8回まぜよう！", s4_done: "✨ 混ざりました！",
+                s5: "Step 5: フレーバーを選ぼう！",
+                s6_ready: "Step 6: オーブンに入れよう！", s6_baking: "焼成中... {n}s", s6_perfect: "✨ 焼き上がり！取出しボタンを押してね", s6_burnt: "🔥 焦げました！いつでも取出しOK！", s6_done: "✨ 焼き上がり！", s6_out: "✨ 取出し完了！",
+                s7: "Step 7: クリームを平らに伸ばそう！", s7_done: "✨ 完了！",
+                s8: "Step 8: デコレーションしよう！",
+                s9: "Step 9: 完成！ポラロイドカードを確認しよう。",
+                placeholder: "ケーキの名前をつけてね...",
+                default_name: "マイ特製ケーキ",
+                score_title: "⭐ シェフスコア",
+                btn_next: "✨ 次のステップ", btn_step2: "🥣 卵黄分離へ ➡", btn_oven_in: "🚪 オーブンへ", btn_oven_out: "🔔 取出す", btn_cover: "📦 重ねる", btn_cream: "🍦 クリームを伸ばす"
+            },
+            'ko': {
+                s1: "1단계: 계란 3개를 차례대로 깨세요!", s1_prog: "깬 계란: {n}/3", s1_done: "✨ 계란 3개 모두 투입!",
+                s2: "2단계: 노른자를 하나씩 오른쪽 볼로 분리하세요!", s2_prog: "분리：{n}/3", s2_done: "✨ 3개 노른자 분리 완료!",
+                s3: "버튼을 선택하고 연타하거나 원을 그려 휘핑을 강화하세요!", s3_done: "✨ 완료!",
+                s4_init: "4단계: 밀가루와 우유를 부으세요!", s4_stir: "4단계: 8번 섞으세요!", s4_done: "✨ 섞임 완료!",
+                s5: "5단계: 케이크 맛을 선택하세요!",
+                s6_ready: "6단계: 오븐에 넣으세요!", s6_baking: "굽는 중... {n}s", s6_perfect: "✨ 케이크 완성! 꺼내기 버튼을 누르세요!", s6_burnt: "🔥 탔어요! 언제든 꺼내세요!", s6_done: "✨ 굽기 완료!", s6_out: "✨ 완성!",
+                s7: "7단계: 크림을 부드럽게 펴 바르세요!", s7_done: "✨ 완료!",
+                s8: "Step 8: 장식하세요!",
+                s9: "Step 9: 완료! 폴라로이드 마스터 점수 카드를 확인하세요.",
+                placeholder: "케이크 이름을 입력하세요...",
+                default_name: "나만의 특제 케이크",
+                score_title: "⭐ 마스터 셰프 점수",
+                btn_next: "✨ 다음 단계", btn_step2: "🥣 노른자 분리 ➡", btn_oven_in: "🚪 오븐에 넣기", btn_oven_out: "🔔 꺼내기", btn_cover: "📦 덮기", btn_cream: "🍦 크림 바르기"
+            }
+        };
+
+        class ClayCakeGame {
+            constructor() {
+                this.container = document.getElementById('webgl-container');
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+
+                this.lang = 'zh-CN';
+                this.step = 1;
+                this.gameData = { 
+                    crackedCount: 0, 
+                    separatedCount: 0,
+                    yolkScale: 1.0,  
+                    whiteScale: 1.0, 
+                    stirCount: 0,
+                    flourPoured: false,
+                    milkPoured: false,
+                    flavorColor: 0xFFFDD0,
+                    finalBakedTexture: null,
+                    isBurnt: false,
+                    bakeSec: 0,
+                    bakeState: 0, 
+                    scoreNum: 99
+                };
+
+                this.activeObjects = [];
+                this.leftYolks = [];
+                this.rightYolks = [];
+                this.creamBlobs = [];
+                this.decorItems = [];
+                this.smokeParticles = [];
+                
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.isDragging = false;
+                this.activeDragObj = null;
+                this.dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8);
+
+                this.step3Mode = 'white';
+                this.step8Mode = 'fruit';
+                this.currentFruitType = 'strawberry';
+                this.currentSauceColor = 0x5D4037;
+                this.isDrawing = false;
+
+                this.decorMeshList = [];
+
+                this.initEngine();
+                this.initLights();
+                this.initEnvironment();
+                this.loadStep(1);
+
+                this.animate = this.animate.bind(this);
+                requestAnimationFrame(this.animate);
+            }
+
+            t(key, params = {}) {
+                let text = I18N[this.lang][key] || key;
+                for (let k in params) text = text.replace(`{${k}}`, params[k]);
+                return text;
+            }
+
+            changeLanguage(newLang) { 
+                this.lang = newLang; 
+                this.updateText(); 
+            }
+
+            updateText() {
+                const banner = document.getElementById('instruction-banner');
+                const btn = document.getElementById('next-step-btn');
+                const nameInput = document.getElementById('cake-name-input');
+                if(!nameInput.value) nameInput.placeholder = this.t('placeholder');
+                
+                if (this.step === 1) {
+                    if (this.gameData.crackedCount >= 3) {
+                        banner.textContent = this.t('s1_done'); btn.textContent = this.t('btn_step2'); btn.style.display = "block";
+                    } else {
+                        banner.textContent = this.gameData.crackedCount > 0 ? this.t('s1_prog', { n: this.gameData.crackedCount }) : this.t('s1');
+                        btn.style.display = "none";
+                    }
+                } else if (this.step === 2) {
+                    if (this.gameData.separatedCount >= 3) {
+                        banner.textContent = this.t('s2_done'); btn.textContent = this.t('btn_next'); btn.style.display = "block";
+                    } else {
+                        banner.textContent = this.t('s2_prog', { n: this.gameData.separatedCount }); btn.style.display = "none";
+                    }
+                } else if (this.step === 3) {
+                    if (this.gameData.yolkScale > 1.2 && this.gameData.whiteScale > 1.2) {
+                        banner.textContent = this.t('s3_done'); btn.textContent = this.t('btn_next'); btn.style.display = "block";
+                    } else {
+                        banner.textContent = this.t('s3'); btn.style.display = "none";
+                    }
+                } else if (this.step === 4) {
+                    if (this.gameData.stirCount >= 8) {
+                        banner.textContent = this.t('s4_done'); btn.textContent = this.t('btn_next'); btn.style.display = "block";
+                    } else if (this.gameData.flourPoured && this.gameData.milkPoured) {
+                        banner.textContent = this.t('s4_stir'); btn.style.display = "none";
+                    } else { banner.textContent = this.t('s4_init'); btn.style.display = "none"; }
+                } else if (this.step === 5) {
+                    banner.textContent = this.t('s5'); btn.textContent = this.t('btn_next'); btn.style.display = "block";
+                } else if (this.step === 6) {
+                    if (this.gameData.bakeState === 0) {
+                        banner.textContent = this.t('s6_ready'); btn.textContent = this.t('btn_oven_in'); btn.style.display = "block";
+                    } else if (this.gameData.bakeState === 2 || this.gameData.bakeState === 3) {
+                        if (this.gameData.isBurnt) {
+                            banner.textContent = this.t('s6_burnt');
+                        } else if (this.gameData.bakeSec >= 14 && this.gameData.bakeSec <= 17) {
+                            banner.textContent = this.t('s6_perfect');
+                        } else {
+                            banner.textContent = this.t('s6_baking', { n: this.gameData.bakeSec.toFixed(1) });
+                        }
+                        btn.textContent = this.t('btn_oven_out'); btn.style.display = "block";
+                    } else if (this.gameData.bakeState === 4) {
+                        banner.textContent = this.t('s6_out'); btn.textContent = this.t('btn_next'); btn.style.display = "block";
+                    }
+                } else if (this.step === 7) {
+                    banner.textContent = this.t('s7'); btn.style.display = "none";
+                } else if (this.step === 8) {
+                    banner.textContent = this.t('s8');
+                    btn.textContent = this.t('btn_next'); btn.style.display = "block";
+                } else if (this.step === 9) {
+                    banner.textContent = this.t('s9'); btn.style.display = "none";
+                }
+            }
+
+            initEngine() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 10, 12);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.container.appendChild(this.renderer.domElement);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true; 
+                this.controls.enablePan = false;
+                this.controls.minDistance = 6; 
+                this.controls.maxDistance = 20;
+                this.controls.maxPolarAngle = Math.PI / 2.2;
+
+                const dom = this.renderer.domElement;
+                dom.addEventListener('pointerdown', e => this.onPointerDown(e));
+                dom.addEventListener('pointermove', e => this.onPointerMove(e));
+                dom.addEventListener('pointerup', e => this.onPointerUp(e));
+            }
+
+            initLights() {
+                this.scene.add(new THREE.AmbientLight(0xFFFEE8, 0.7));
+                const dir = new THREE.DirectionalLight(0xFFFAF0, 1.1);
+                dir.position.set(10, 18, 10); dir.castShadow = true;
+                this.scene.add(dir);
+            }
+
+            initEnvironment() {
+                const table = new THREE.Mesh(new THREE.BoxGeometry(32, 2, 22), new THREE.MeshStandardMaterial({ color: 0xF5CBA7, roughness: 0.8 }));
+                table.position.set(0, -1, 0); table.receiveShadow = true; this.scene.add(table);
+            }
+
+            clearScene() {
+                while (this.scene.children.length > 3) { this.scene.remove(this.scene.children[3]); }
+                this.activeObjects = []; this.leftYolks = []; this.rightYolks = []; this.creamBlobs = []; this.decorItems = []; this.smokeParticles = [];
+                this.decorMeshList = [];
+                document.getElementById('dynamic-btn-group').innerHTML = "";
+                document.getElementById('progress-box').style.display = "none";
+            }
+
+            loadStep(step) {
+                this.clearScene(); this.step = step; this.updateText();
+                this.controls.enabled = true;
+
+                if (step === 1) this.setupStep1();
+                else if (step === 2) this.setupStep2();
+                else if (step === 3) this.setupStep3();
+                else if (step === 4) this.setupStep4();
+                else if (step === 5) this.setupStep5();
+                else if (step === 6) this.setupStep6();
+                else if (step === 7) this.setupStep7();
+                else if (step === 8) this.setupStep8();
+                else if (step === 9) this.setupStep9();
+            }
+
+            // --- Step 1 ---
+            setupStep1() {
+                this.gameData.crackedCount = 0;
+                this.mainBowl = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 2.2, 2.6, 32, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xFFFDF8, transmission: 0.88, roughness: 0.15, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+                this.mainBowl.position.set(0, 1.3, 0); this.mainBowl.castShadow = true; this.scene.add(this.mainBowl);
+
+                const eggGeo = new THREE.SphereGeometry(0.75, 32, 32); eggGeo.scale(1, 1.25, 1);
+                const eggMat = new THREE.MeshStandardMaterial({ color: 0xFFD1A4, roughness: 0.5 });
+                const pos = [new THREE.Vector3(-4.5, 0.75, 1.5), new THREE.Vector3(-5.5, 0.75, -0.5), new THREE.Vector3(-4.0, 0.75, -2.2)];
+                pos.forEach((p, i) => {
+                    const egg = new THREE.Mesh(eggGeo, eggMat); egg.position.copy(p); egg.castShadow = true;
+                    egg.userData = { type: 'egg', id: i, cracked: false };
+                    this.scene.add(egg); this.activeObjects.push(egg);
+                });
+            }
+
+            spawnEggDrop(index) {
+                const whiteLiquid = new THREE.Mesh(new THREE.CylinderGeometry(2.2 + index * 0.3, 2.0, 0.15 + index * 0.1, 32), new THREE.MeshPhysicalMaterial({ color: 0xFFFDE7, transmission: 0.7, transparent: true, opacity: 0.7 }));
+                whiteLiquid.position.set(0, 0.1 + index * 0.08, 0); this.scene.add(whiteLiquid);
+                const yolk = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFF9800, roughness: 0.2 }));
+                yolk.position.set(-0.8 + index * 0.8, 0.45, (index % 2 === 0 ? 0.3 : -0.3)); yolk.castShadow = true; this.scene.add(yolk);
+            }
+
+            // --- Step 2 ---
+            setupStep2() {
+                this.gameData.separatedCount = 0;
+                const bowlMat = new THREE.MeshPhysicalMaterial({ color: 0xFFFDF8, transmission: 0.88, roughness: 0.15, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+                this.leftBowl = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 2.2, 2.6, 32, 1, true), bowlMat); this.leftBowl.position.set(-2.5, 1.3, 0); this.scene.add(this.leftBowl);
+                this.rightBowl = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 1.6, 2.0, 32, 1, true), bowlMat); this.rightBowl.position.set(3.5, 1.0, 0); this.scene.add(this.rightBowl);
+
+                const whiteLiquid = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 2.0, 0.4, 32), new THREE.MeshPhysicalMaterial({ color: 0xFFFDE7, transmission: 0.6, transparent: true, opacity: 0.7 }));
+                whiteLiquid.position.set(-2.5, 0.4, 0); this.scene.add(whiteLiquid);
+
+                this.leftYolks = [];
+                for (let i = 0; i < 3; i++) {
+                    const yolk = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFF9800, roughness: 0.2 }));
+                    yolk.position.set(-3.3 + i * 0.8, 0.55, (i % 2 === 0 ? 0.2 : -0.2));
+                    yolk.userData = { type: 'yolk', id: i, originPos: yolk.position.clone() };
+                    this.scene.add(yolk); this.leftYolks.push(yolk);
+                }
+            }
+
+            // --- Step 3 ---
+            setupStep3() {
+                this.gameData.yolkScale = 1.0;
+                this.gameData.whiteScale = 1.0;
+                this.step3Mode = 'white'; 
+
+                const bowlMat = new THREE.MeshPhysicalMaterial({ color: 0xFFFDF8, transmission: 0.88, roughness: 0.15, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+                
+                const leftBowl = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 1.8, 2.0, 32, 1, true), bowlMat);
+                leftBowl.position.set(-3.0, 1.0, 0); this.scene.add(leftBowl);
+                this.step3YolkMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(1.0, 32, 32),
+                    new THREE.MeshStandardMaterial({ color: 0xFFC107, roughness: 0.3 })
+                );
+                this.step3YolkMesh.scale.set(1, 0.4, 1);
+                this.step3YolkMesh.position.set(-3.0, 0.5, 0);
+                this.scene.add(this.step3YolkMesh);
+
+                const rightBowl = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 1.8, 2.0, 32, 1, true), bowlMat);
+                rightBowl.position.set(3.0, 1.0, 0); this.scene.add(rightBowl);
+                this.step3WhiteMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(1.0, 32, 32), 
+                    new THREE.MeshStandardMaterial({ color: 0xFFFFF8, roughness: 0.3 })
+                );
+                this.step3WhiteMesh.scale.set(1, 0.5, 1); 
+                this.step3WhiteMesh.position.set(3.0, 0.6, 0); 
+                this.scene.add(this.step3WhiteMesh);
+
+                this.whiskGroup = new THREE.Group();
+                const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.5), new THREE.MeshStandardMaterial({ color: 0xFF69B4 })); handle.position.y = 0.8; this.whiskGroup.add(handle);
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), new THREE.MeshStandardMaterial({ color: 0xCCCCCC, wireframe: true })); head.position.y = -0.1; this.whiskGroup.add(head);
+                this.whiskGroup.position.set(3.0, 2.0, 0); this.scene.add(this.whiskGroup);
+
+                this.renderStep3Buttons();
+            }
+
+            renderStep3Buttons() {
+                const group = document.getElementById('dynamic-btn-group');
+                group.innerHTML = `
+                    <button class="action-btn ${this.step3Mode==='yolk'?'active-mode':''}" style="display:block;" onclick="Game.setStep3Mode('yolk')">🥚 打发蛋黄 (左)</button>
+                    <button class="action-btn ${this.step3Mode==='white'?'active-mode':''}" style="display:block;" onclick="Game.setStep3Mode('white')">☁️ 打发蛋白 (右)</button>
+                `;
+            }
+
+            setStep3Mode(mode) {
+                this.step3Mode = mode;
+                if (mode === 'yolk') {
+                    this.whiskGroup.position.set(-3.0, 2.0, 0);
+                } else {
+                    this.whiskGroup.position.set(3.0, 2.0, 0);
+                }
+                this.renderStep3Buttons();
+            }
+
+            whipCurrentBowl() {
+                if (this.step3Mode === 'yolk') {
+                    this.gameData.yolkScale += 0.2; 
+                    const s = this.gameData.yolkScale;
+                    this.step3YolkMesh.scale.set(s, s * 0.4, s);
+                    this.animateBounce(this.step3YolkMesh, s, s * 0.4);
+                } else {
+                    this.gameData.whiteScale += 0.2; 
+                    const s = this.gameData.whiteScale;
+                    this.step3WhiteMesh.scale.set(s, s * 0.5, s);
+                    this.animateBounce(this.step3WhiteMesh, s, s * 0.5);
+                }
+                this.updateText();
+            }
+
+            animateBounce(mesh, sx, sy) {
+                let bounce = 0;
+                const bAnim = () => {
+                    bounce += 0.2;
+                    if(bounce <= Math.PI) {
+                        const factor = 1 + Math.sin(bounce) * 0.15;
+                        mesh.scale.set(sx * factor, sy * factor, sx * factor);
+                        requestAnimationFrame(bAnim);
+                    } else {
+                        mesh.scale.set(sx, sy, sx);
+                    }
+                };
+                bAnim();
+            }
+
+            // --- Step 4 ---
+            setupStep4() {
+                this.gameData.flourPoured = false; this.gameData.milkPoured = false; this.gameData.stirCount = 0;
+                const bowl = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 2.2, 2.6, 32, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xFFFDF8, transmission: 0.88, roughness: 0.15, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+                bowl.position.y = 1.3; bowl.castShadow = true; this.scene.add(bowl);
+
+                this.batterMesh = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 2.0, 1.2, 32), new THREE.MeshStandardMaterial({ color: 0xFFFDD0, roughness: 0.5 }));
+                this.batterMesh.position.set(0, 0.8, 0); this.scene.add(this.batterMesh);
+
+                this.flourGroup = new THREE.Group();
+                const flourBag = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.6, 1.0), new THREE.MeshStandardMaterial({ color: 0xF5F5DC, roughness: 0.9 })); flourBag.position.y = 0.8; this.flourGroup.add(flourBag);
+                this.flourGroup.position.set(-4.5, 0, 0); this.scene.add(this.flourGroup);
+
+                this.milkGroup = new THREE.Group();
+                const milkCarton = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.8, 0.9), new THREE.MeshStandardMaterial({ color: 0xE3F2FD, roughness: 0.4 })); milkCarton.position.y = 0.9; this.milkGroup.add(milkCarton);
+                this.milkGroup.position.set(4.5, 0, 0); this.scene.add(this.milkGroup);
+
+                const group = document.getElementById('dynamic-btn-group');
+                group.innerHTML = `
+                    <button class="action-btn" id="btn-pour-flour" style="display:block;" onclick="Game.pourItem('flour')">🌾 倒入面粉</button>
+                    <button class="action-btn" id="btn-pour-milk" style="display:block;" onclick="Game.pourItem('milk')">🥛 倒入牛奶</button>
+                `;
+            }
+
+            pourItem(type) {
+                if (type === 'flour' && !this.gameData.flourPoured) {
+                    this.gameData.flourPoured = true; document.getElementById('btn-pour-flour').style.display = 'none';
+                    this.animatePour(this.flourGroup, () => { this.batterMesh.material.color.setHex(0xFFF8DC); this.checkPourComplete(); });
+                } else if (type === 'milk' && !this.gameData.milkPoured) {
+                    this.gameData.milkPoured = true; document.getElementById('btn-pour-milk').style.display = 'none';
+                    this.animatePour(this.milkGroup, () => { this.batterMesh.material.color.setHex(0xFFFACD); this.checkPourComplete(); });
+                }
+            }
+
+            animatePour(targetGroup, onComplete) {
+                let p = 0; const startPos = targetGroup.position.clone();
+                const anim = () => {
+                    p += 0.05;
+                    if (p <= 0.5) { targetGroup.position.lerpVectors(startPos, new THREE.Vector3(0, 3.5, 0), p * 2); targetGroup.rotation.z = THREE.MathUtils.lerp(0, Math.PI / 3, p * 2); requestAnimationFrame(anim); }
+                    else if (p <= 1.0) { targetGroup.position.lerpVectors(new THREE.Vector3(0, 3.5, 0), startPos, (p - 0.5) * 2); targetGroup.rotation.z = THREE.MathUtils.lerp(Math.PI / 3, 0, (p - 0.5) * 2); requestAnimationFrame(anim); }
+                    else { targetGroup.position.copy(startPos); targetGroup.rotation.z = 0; if (onComplete) onComplete(); }
+                };
+                anim();
+            }
+
+            checkPourComplete() {
+                if (this.gameData.flourPoured && this.gameData.milkPoured) {
+                    this.step4Stirrer = new THREE.Group();
+                    const sHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.6), new THREE.MeshStandardMaterial({ color: 0xFFB6C1 })); sHandle.position.y = 0.8; this.step4Stirrer.add(sHandle);
+                    const sBlade = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x8D6E63 })); sBlade.position.y = 0.1; this.step4Stirrer.add(sBlade);
+                    this.step4Stirrer.position.set(0, 1.2, 0); this.scene.add(this.step4Stirrer);
+                    this.updateText();
+                }
+            }
+
+            // --- Step 5 ---
+            setupStep5() {
+                const bowl = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 2.2, 2.6, 32, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xFFFDF8, transmission: 0.88, roughness: 0.15, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+                bowl.position.y = 1.3; this.scene.add(bowl);
+                this.flavorBatter = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 2.0, 1.2, 32), new THREE.MeshStandardMaterial({ color: this.gameData.flavorColor, roughness: 0.5 }));
+                this.flavorBatter.position.set(0, 0.8, 0); this.scene.add(this.flavorBatter);
+                const group = document.getElementById('dynamic-btn-group');
+                group.innerHTML = `
+                    <button class="action-btn" style="display:block;" onclick="Game.setFlavor(0xFFFDD0)">🍦 原味香草</button>
+                    <button class="action-btn" style="display:block;" onclick="Game.setFlavor(0x8BC34A)">🍵 抹茶味</button>
+                    <button class="action-btn" style="display:block;" onclick="Game.setFlavor(0x5D4037)">🍫 巧克力</button>
+                    <button class="action-btn" style="display:block;" onclick="Game.setFlavor(0xFF8DA1)">🍓 草莓味</button>
+                `;
+            }
+            setFlavor(hex) { this.gameData.flavorColor = hex; if (this.flavorBatter) this.flavorBatter.material.color.setHex(hex); }
+
+            // --- Step 6 ---
+            setupStep6() {
+                this.gameData.bakeSec = 0; this.gameData.bakeState = 0; this.gameData.isBurnt = false;
+                this.ovenGroup = new THREE.Group();
+                const ovenBody = new THREE.Mesh(new THREE.BoxGeometry(14.0, 9.0, 10.0), new THREE.MeshStandardMaterial({ color: 0xFF8DA1, roughness: 0.3 }));
+                ovenBody.position.y = 4.5; this.ovenGroup.add(ovenBody);
+                this.ovenGlass = new THREE.Mesh(new THREE.BoxGeometry(11.0, 6.5, 0.2), new THREE.MeshPhysicalMaterial({ color: 0xFFFFFF, transmission: 0.9, transparent: true, opacity: 0.8 }));
+                this.ovenGlass.position.set(0, 4.5, 5.1); this.ovenGroup.add(this.ovenGlass);
+                this.ovenGroup.position.set(0, 0, -5.0); this.scene.add(this.ovenGroup);
+
+                this.bakeCake = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 1.8, 32), new THREE.MeshStandardMaterial({ color: this.gameData.flavorColor, roughness: 0.8 }));
+                this.bakeCake.position.set(0, 0.9, 1.5); this.scene.add(this.bakeCake);
+            }
+
+            startBakingProcess() {
+                if (this.gameData.bakeState !== 0) return;
+                this.gameData.bakeState = 1;
+                let p = 0; const startZ = 1.5; const targetZ = -3.8;
+                const slideIn = () => {
+                    p += 0.04;
+                    if (p <= 1) { this.bakeCake.position.z = THREE.MathUtils.lerp(startZ, targetZ, p); requestAnimationFrame(slideIn); }
+                    else { 
+                        this.gameData.bakeState = 2; 
+                        this.gameData.bakeSec = 0; 
+                        document.getElementById('progress-box').style.display = "block"; 
+                        this.runBakingTimer(); 
+                    }
+                };
+                slideIn();
+            }
+
+            runBakingTimer() {
+                const loop = () => {
+                    if (this.gameData.bakeState !== 2 && this.gameData.bakeState !== 3) return;
+                    this.gameData.bakeSec += 0.2;
+                    
+                    const progBar = document.getElementById('progress-bar');
+                    progBar.style.width = `${Math.min((this.gameData.bakeSec / 18) * 100, 100)}%`;
+
+                    const t = this.gameData.bakeSec;
+                    if (t > 18) {
+                        this.gameData.isBurnt = true;
+                        progBar.style.backgroundColor = '#333333';
+                        this.bakeCake.material.color.setHex(0x1A1A1A);
+                        
+                        if (Math.random() < 0.4 && this.smokeParticles.length < 25) {
+                            const smoke = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshStandardMaterial({ color: 0x333333, transparent: true, opacity: 0.6 }));
+                            smoke.position.set((Math.random() - 0.5) * 2, 2.5, -3.8 + (Math.random() - 0.5) * 1);
+                            smoke.userData = { vy: 0.04 + Math.random() * 0.03, life: 1.0 };
+                            this.scene.add(smoke); this.smokeParticles.push(smoke);
+                        }
+                    } else {
+                        const baseCol = new THREE.Color(this.gameData.flavorColor);
+                        if (t <= 5) baseCol.lerp(new THREE.Color(0xFFFACD), t / 5);
+                        else if (t <= 12) baseCol.lerp(new THREE.Color(0xFFD700), (t - 5) / 7);
+                        else baseCol.lerp(new THREE.Color(0xD2691E), (t - 12) / 6);
+                        this.bakeCake.material.color.copy(baseCol);
+                    }
+
+                    this.smokeParticles.forEach((sp, idx) => {
+                        sp.position.y += sp.userData.vy;
+                        sp.scale.addScalar(0.01);
+                        sp.material.opacity -= 0.02;
+                        if(sp.material.opacity <= 0) {
+                            this.scene.remove(sp);
+                            this.smokeParticles.splice(idx, 1);
+                        }
+                    });
+
+                    this.updateText();
+                    if (this.gameData.bakeState === 2) {
+                        setTimeout(loop, 200);
+                    }
+                };
+                loop();
+            }
+
+            takeOutCake() {
+                if (this.gameData.bakeState !== 2 && this.gameData.bakeState !== 3) return;
+                this.gameData.bakeState = 4; 
+                
+                const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#' + this.bakeCake.material.color.getHexString(); ctx.fillRect(0, 0, 512, 256);
+                for(let i=0; i<350; i++) {
+                    ctx.fillStyle = this.gameData.isBurnt ? 'rgba(0,0,0,0.3)' : (Math.random() > 0.5 ? 'rgba(139,69,19,0.22)' : 'rgba(255,255,255,0.15)');
+                    ctx.beginPath(); ctx.arc(Math.random()*512, Math.random()*256, Math.random()*4.5+1, 0, Math.PI*2); ctx.fill();
+                }
+                const texture = new THREE.CanvasTexture(canvas);
+                this.gameData.finalBakedTexture = texture;
+
+                let p = 0; const startZ = -3.8; const targetZ = 1.5;
+                const slideOut = () => {
+                    p += 0.04;
+                    if (p <= 1) { this.bakeCake.position.z = THREE.MathUtils.lerp(startZ, targetZ, p); requestAnimationFrame(slideOut); }
+                    else { document.getElementById('progress-box').style.display = "none"; this.updateText(); }
+                };
+                slideOut();
+            }
+
+            // --- Step 7 ---
+            setupStep7() {
+                const geo = new THREE.CylinderGeometry(2.6, 2.6, 0.9, 32);
+                const mat = new THREE.MeshStandardMaterial({ map: this.gameData.finalBakedTexture, roughness: 0.8 });
+                this.cakeBottom = new THREE.Mesh(geo, mat); this.cakeBottom.position.set(0, 0.45, 0); this.scene.add(this.cakeBottom);
+                this.cakeTop = new THREE.Mesh(geo, mat); this.cakeTop.position.set(0, 1.85, 0); this.scene.add(this.cakeTop);
+
+                for(let i=0; i<4; i++) {
+                    const blob = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFFFDF8, roughness: 0.3 }));
+                    blob.scale.set(1, 1, 1);
+                    const angle = (i / 4) * Math.PI * 2;
+                    blob.position.set(Math.cos(angle)*1.2, 0.95, Math.sin(angle)*1.2);
+                    blob.userData = { smoothed: false };
+                    this.scene.add(blob); this.creamBlobs.push(blob);
+                }
+
+                const group = document.getElementById('dynamic-btn-group');
+                group.innerHTML = `<button class="action-btn" style="display:block; background:#FF69B4; color:#FFF;" onclick="Game.coverCake()">📦 平铺完成，盖上顶层</button>`;
+            }
+
+            smoothCreamBlob(blob) {
+                if(blob.userData.smoothed) return;
+                blob.userData.smoothed = true;
+                let p = 0;
+                const anim = () => {
+                    p += 0.1;
+                    if(p <= 1) {
+                        blob.scale.y = THREE.MathUtils.lerp(1, 0.3, p);
+                        blob.scale.x = THREE.MathUtils.lerp(1, 1.8, p);
+                        blob.scale.z = THREE.MathUtils.lerp(1, 1.8, p);
+                        requestAnimationFrame(anim);
+                    }
+                };
+                anim();
+            }
+
+            coverCake() {
+                let p = 0;
+                const anim = () => {
+                    p += 0.1;
+                    if (p <= 1) { this.cakeTop.position.y = THREE.MathUtils.lerp(1.85, 1.35, p); requestAnimationFrame(anim); }
+                    else {
+                        this.scene.remove(this.cakeTop);
+                        const full = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 1.8, 32), this.cakeBottom.material);
+                        full.position.set(0, 0.9, 0); this.scene.add(full);
+                        this.scene.remove(this.cakeBottom);
+                        this.loadStep(8);
+                    }
+                };
+                anim();
+            }
+
+            // --- Step 8 ---
+            setupStep8() {
+                this.decorCake = new THREE.Mesh(
+                    new THREE.CylinderGeometry(2.6, 2.6, 1.8, 32), 
+                    new THREE.MeshStandardMaterial({ map: this.gameData.finalBakedTexture, roughness: 0.8 })
+                );
+                this.decorCake.position.set(0, 0.9, 0); 
+                this.decorCake.castShadow = true; 
+                this.decorCake.receiveShadow = true;
+                this.scene.add(this.decorCake);
+                this.decorMeshList.push(this.decorCake);
+
+                const creamMat = new THREE.MeshStandardMaterial({ color: 0xFFFDF8, roughness: 0.28 });
+                const creamLayer = new THREE.Mesh(new THREE.CylinderGeometry(2.62, 2.62, 0.25, 32), creamMat);
+                creamLayer.position.set(0, 0.9, 0);
+                this.scene.add(creamLayer);
+
+                const sideCream = new THREE.Mesh(new THREE.CylinderGeometry(2.65, 2.65, 1.86, 32, 1, true), creamMat); 
+                sideCream.position.set(0, 0.9, 0); 
+                this.scene.add(sideCream);
+                this.decorMeshList.push(sideCream);
+                
+                const creamTop = new THREE.Mesh(new THREE.CylinderGeometry(2.62, 2.62, 0.15, 32), creamMat); 
+                creamTop.position.set(0, 1.82, 0); 
+                this.scene.add(creamTop);
+                this.decorMeshList.push(creamTop);
+
+                this.renderStep8Buttons();
+            }
+
+            renderStep8Buttons() {
+                const group = document.getElementById('dynamic-btn-group');
+                group.innerHTML = `
+                    <button class="action-btn ${this.step8Mode==='fruit'&&this.currentFruitType==='strawberry'?'active-mode':''}" style="display:block;" onclick="Game.setFruitMode('strawberry')">🍓 放草莓</button>
+                    <button class="action-btn ${this.step8Mode==='fruit'&&this.currentFruitType==='cherry'?'active-mode':''}" style="display:block;" onclick="Game.setFruitMode('cherry')">🍒 放樱桃</button>
+                    <button class="action-btn ${this.step8Mode==='sauce'&&this.currentSauceColor===0x5D4037?'active-mode':''}" style="display:block;" onclick="Game.setSauceMode(0x5D4037)">🍫 巧克力酱</button>
+                    <button class="action-btn ${this.step8Mode==='sauce'&&this.currentSauceColor===0xE91E63?'active-mode':''}" style="display:block;" onclick="Game.setSauceMode(0xE91E63)">🍓 草莓酱</button>
+                    <button class="action-btn ${this.step8Mode==='sprinkle'?'active-mode':''}" style="display:block;" onclick="Game.setSprinkleMode()">✨ 撒彩色糖针</button>
+                `;
+            }
+
+            setFruitMode(fruitType) {
+                this.step8Mode = 'fruit';
+                this.currentFruitType = fruitType;
+                this.controls.enabled = true;
+                this.renderStep8Buttons();
+            }
+
+            setSauceMode(colorHex) {
+                this.step8Mode = 'sauce';
+                this.currentSauceColor = colorHex;
+                this.controls.enabled = false;
+                this.renderStep8Buttons();
+            }
+
+            setSprinkleMode() {
+                this.step8Mode = 'sprinkle';
+                this.controls.enabled = false;
+                this.renderStep8Buttons();
+            }
+
+            spawnFruitAt(point) {
+                const color = this.currentFruitType === 'strawberry' ? 0xFF0000 : 0xB71C1C;
+                const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3 });
+                const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), mat);
+                fruit.scale.set(1, 1.25, 1);
+                point.y += 0.12 + (this.decorItems.length * 0.002);
+                fruit.position.copy(point);
+                this.scene.add(fruit);
+                this.decorItems.push(fruit);
+            }
+
+            spawnSauceAt(point) {
+                if(point.length() < 2.55) {
+                    const blob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: this.currentSauceColor, roughness: 0.2 }));
+                    blob.position.copy(point); 
+                    blob.position.y = 1.91;
+                    this.scene.add(blob); 
+                    this.decorItems.push(blob);
+                }
+            }
+
+            spawnSprinkleAt(point) {
+                if(point.length() < 2.55) {
+                    const colors = [0xFF69B4, 0x00CED1, 0xFFD700, 0xADFF2F, 0xFF4500];
+                    const s = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.2), new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random()*colors.length)] }));
+                    s.position.copy(point);
+                    s.position.y = 1.91;
+                    s.rotation.set(Math.random(), Math.random(), Math.random());
+                    this.scene.add(s); 
+                    this.decorItems.push(s);
+                }
+            }
+
+            // --- Step 9：带有拍立得相框的卡片预览与数字评分系统 ---
+            setupStep9() {
+                this.controls.enabled = true;
+
+                // 计算数字评分
+                if (this.gameData.isBurnt) {
+                    this.gameData.scoreNum = 58;
+                } else if (this.decorItems.length >= 10) {
+                    this.gameData.scoreNum = 99;
+                } else {
+                    this.gameData.scoreNum = 88;
+                }
+
+                // 强制渲染一次 3D 画面并转成图像，放入拍立得白色相框中
+                this.renderer.render(this.scene, this.camera);
+                const dataURL = this.renderer.domElement.toDataURL('image/png');
+
+                const imgContainer = document.getElementById('polaroid-img-container');
+                imgContainer.innerHTML = `<img src="${dataURL}" alt="Cake Polaroid" />`;
+
+                // 设置数字评分文本
+                document.getElementById('score-display').textContent = `${this.t('score_title')}：${this.gameData.scoreNum} / 100`;
+
+                // 同步输入框与显示名字
+                const nameInput = document.getElementById('cake-name-input');
+                const defaultName = this.t('default_name');
+                if(!nameInput.value.trim()) {
+                    nameInput.value = defaultName;
+                    document.getElementById('display-cake-name').textContent = defaultName;
+                }
+
+                // 显示拍立得结算卡片弹窗
+                document.getElementById('polaroid-modal').style.display = "flex";
+                document.getElementById('hud-container').style.display = "none";
+                document.getElementById('top-ui').style.display = "none";
+            }
+
+            updateCardName(val) {
+                const displayName = val.trim() !== "" ? val : this.t('default_name');
+                document.getElementById('display-cake-name').textContent = displayName;
+            }
+
+            restartGame() {
+                document.getElementById('polaroid-modal').style.display = "none";
+                document.getElementById('hud-container').style.display = "flex";
+                document.getElementById('top-ui').style.display = "flex";
+                document.getElementById('cake-name-input').value = "";
+                this.loadStep(1);
+            }
+
+            // === 统一的事件与精准 Raycaster 射线检测判定系统 ===
+            onPointerDown(e) {
+                const rect = this.renderer.domElement.getBoundingClientRect();
+                this.mouse.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                if (this.step === 1) {
+                    const hits = this.raycaster.intersectObjects(this.activeObjects);
+                    if (hits.length > 0) {
+                        const obj = hits[0].object;
+                        if (!obj.userData.cracked) {
+                            obj.userData.cracked = true; this.scene.remove(obj);
+                            this.spawnEggDrop(this.gameData.crackedCount);
+                            this.gameData.crackedCount++; this.updateText();
+                        }
+                    }
+                } else if (this.step === 2) {
+                    const hits = this.raycaster.intersectObjects(this.leftYolks);
+                    if (hits.length > 0) { this.activeDragObj = hits[0].object; this.isDragging = true; this.controls.enabled = false; }
+                } else if (this.step === 3) {
+                    this.whipCurrentBowl();
+                    this.isDragging = true; this.controls.enabled = false;
+                } else if (this.step === 4 && this.step4Stirrer) {
+                    this.isDragging = true; this.controls.enabled = false;
+                } else if (this.step === 7) {
+                    const hits = this.raycaster.intersectObjects(this.creamBlobs);
+                    if(hits.length > 0) { this.smoothCreamBlob(hits[0].object); }
+                } else if (this.step === 8) {
+                    const hits = this.raycaster.intersectObjects(this.decorMeshList);
+                    if (hits.length > 0) {
+                        const hit = hits[0];
+                        if (this.step8Mode === 'fruit') {
+                            this.spawnFruitAt(hit.point);
+                        } else if (this.step8Mode === 'sauce' || this.step8Mode === 'sprinkle') {
+                            this.isDrawing = true;
+                            if (this.step8Mode === 'sauce') this.spawnSauceAt(hit.point);
+                            else this.spawnSprinkleAt(hit.point);
+                        }
+                    }
+                }
+            }
+
+            onPointerMove(e) {
+                const rect = this.renderer.domElement.getBoundingClientRect();
+                this.mouse.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const targetPt = new THREE.Vector3(); this.raycaster.ray.intersectPlane(this.dragPlane, targetPt);
+
+                if (this.step === 3 && this.isDragging) {
+                    if (Math.random() < 0.3) {
+                        this.whipCurrentBowl();
+                    }
+                }
+
+                if (this.step === 8 && this.isDrawing) {
+                    const hits = this.raycaster.intersectObjects(this.decorMeshList);
+                    if (hits.length > 0) {
+                        const hit = hits[0];
+                        if (this.step8Mode === 'sauce') {
+                            this.spawnSauceAt(hit.point);
+                        } else if (this.step8Mode === 'sprinkle') {
+                            if (Math.random() < 0.4) this.spawnSprinkleAt(hit.point);
+                        }
+                    }
+                }
+
+                if (!this.isDragging) return;
+                if (this.step === 2 && this.activeDragObj) {
+                    this.activeDragObj.position.x = THREE.MathUtils.clamp(targetPt.x, -4.5, 5.0);
+                    this.activeDragObj.position.z = THREE.MathUtils.clamp(targetPt.z, -1.8, 1.8);
+                } else if (this.step === 3 && this.whiskGroup) {
+                    if (this.step3Mode === 'yolk') {
+                        this.whiskGroup.position.x = THREE.MathUtils.clamp(targetPt.x, -4.5, -1.5);
+                    } else {
+                        this.whiskGroup.position.x = THREE.MathUtils.clamp(targetPt.x, 1.5, 4.5);
+                    }
+                    this.whiskGroup.position.z = THREE.MathUtils.clamp(targetPt.z, -1.5, 1.5);
+                    this.whiskGroup.rotation.y += 0.4;
+                } else if (this.step === 4 && this.step4Stirrer) {
+                    this.step4Stirrer.position.x = THREE.MathUtils.clamp(targetPt.x, -1.5, 1.5);
+                    this.step4Stirrer.position.z = THREE.MathUtils.clamp(targetPt.z, -1.5, 1.5);
+                    this.step4Stirrer.rotation.y += 0.5;
+                    this.gameData.stirCount = Math.min(8, this.gameData.stirCount + 0.12);
+                    this.batterMesh.rotation.y += 0.2; this.updateText();
+                }
+            }
+
+            onPointerUp() {
+                if (this.step === 2 && this.activeDragObj) {
+                    if (this.activeDragObj.position.x > 1.5) {
+                        const indexInLeft = this.leftYolks.indexOf(this.activeDragObj);
+                        if (indexInLeft !== -1) { this.leftYolks.splice(indexInLeft, 1); }
+                        this.scene.remove(this.activeDragObj);
+                        const newYolk = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFF9800, roughness: 0.2 }));
+                        const count = this.rightYolks.length; newYolk.position.set(3.2 + (count % 2) * 0.5, 0.55, (count > 0 ? 0.3 : -0.2));
+                        newYolk.castShadow = true; this.scene.add(newYolk); this.rightYolks.push(newYolk);
+                        this.gameData.separatedCount = this.rightYolks.length; this.updateText();
+                    } else { this.activeDragObj.position.copy(this.activeDragObj.userData.originPos); }
+                    this.activeDragObj = null;
+                }
+                this.isDragging = false; 
+                this.isDrawing = false;
+                this.controls.enabled = true;
+            }
+
+            nextStep() {
+                if (this.step === 6) {
+                    if (this.gameData.bakeState === 0) { 
+                        this.startBakingProcess(); 
+                        return; 
+                    } else if (this.gameData.bakeState === 2 || this.gameData.bakeState === 3) { 
+                        this.takeOutCake(); 
+                        return;
+                    } else if (this.gameData.bakeState === 4) { 
+                        this.loadStep(7); 
+                        return; 
+                    }
+                }
+                if (this.step < 9) { this.loadStep(this.step + 1); }
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate);
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        const Game = new ClayCakeGame();
+    </script>
+</body>
+</html>
