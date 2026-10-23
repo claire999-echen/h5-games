@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tattoos on your feet - 情侶專屬腳踝紋身</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- html2canvas for Screenshot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#FDFBF7',
+                        warmSand: '#EFECE6',
+                        morandiPink: '#D8C4B6',
+                        morandiGreen: '#A2B3A6',
+                        tattooBlack: '#212529',
+                        tattooGreen: '#1E3A2B',
+                        tattooRed: '#6B2D2D',
+                        tattooBlue: '#1D2A44',
+                    },
+                    fontFamily: {
+                        handwriting: ['Caveat', 'cursive'],
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #FDFBF7;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Custom scrollbar for tattoo stickers */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .polaroid-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="font-sans text-stone-700 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header / Title Banner -->
+    <header class="py-4 text-center border-b border-stone-200/60 bg-cream/80 backdrop-blur sticky top-0 z-40">
+        <h1 class="font-handwriting text-3xl font-bold tracking-wider text-stone-800">Tattoos on your feet</h1>
+        <p class="text-xs text-stone-400 mt-0.5">設計屬於你們的腳踝專屬印記</p>
+    </header>
+
+    <!-- PAGE 1: 命名階段 (Landing Page) -->
+    <section id="page-welcome" class="flex-1 flex flex-col items-center justify-center px-6 py-8 max-w-md mx-auto w-full transition-opacity duration-500">
+        <div class="w-full bg-white p-8 rounded-3xl polaroid-shadow border border-stone-100 text-center space-y-6">
+            <div class="w-20 h-20 mx-auto bg-morandiPink/20 rounded-full flex items-center justify-center text-3xl">
+                🦶✨
+            </div>
+            <div>
+                <h2 class="text-xl font-medium text-stone-800">印刻專屬浪漫</h2>
+                <p class="text-xs text-stone-400 mt-1">輸入你們的名字，開始為彼此畫上愛的紋身</p>
+            </div>
+
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs text-stone-500 mb-1">Partner A 的名字</label>
+                    <input type="text" id="input-partner-a" value="Alex" maxlength="12" class="w-full px-4 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-morandiPink/50 text-sm bg-cream/50">
+                </div>
+                <div>
+                    <label class="block text-xs text-stone-500 mb-1">Partner B 的名字</label>
+                    <input type="text" id="input-partner-b" value="Chloe" maxlength="12" class="w-full px-4 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-morandiPink/50 text-sm bg-cream/50">
+                </div>
+            </div>
+
+            <button id="btn-start" class="w-full py-3.5 bg-stone-800 hover:bg-stone-900 text-white font-medium rounded-xl shadow-lg transition active:scale-95 text-sm tracking-wider">
+                開始設計紋身
+            </button>
+        </div>
+    </section>
+
+    <!-- PAGE 2: 主畫面 & Canvas 互動階段 -->
+    <section id="page-main" class="hidden flex-1 flex-col items-center justify-between p-4 max-w-md mx-auto w-full space-y-4">
+        
+        <!-- Polaroid Frame Container (This will be captured by html2canvas) -->
+        <div id="polaroid-card" class="w-full bg-white p-4 pb-6 rounded-2xl polaroid-shadow border border-stone-100 relative transition-transform">
+            <!-- Names Display -->
+            <div class="flex justify-between items-center px-2 mb-2">
+                <span id="display-name-a" class="font-handwriting text-xl text-stone-700 font-bold">Partner A</span>
+                <span class="text-xs text-stone-300 font-handwriting">♡</span>
+                <span id="display-name-b" class="font-handwriting text-xl text-stone-700 font-bold">Partner B</span>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="relative w-full aspect-[4/3] bg-warmSand/30 rounded-xl overflow-hidden border border-stone-100">
+                <canvas id="tattoo-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+            </div>
+
+            <div class="mt-3 flex justify-between items-center text-[10px] text-stone-400 px-1 font-mono">
+                <span>TATTOOS ON YOUR FEET</span>
+                <span id="card-date">2026.10.22</span>
+            </div>
+        </div>
+
+        <!-- Canvas Controller Hint -->
+        <div class="text-[11px] text-stone-400 text-center flex items-center justify-center gap-3">
+            <span>💡 提示：點擊圖案/文字可選取</span>
+            <span>・ 單指/雙指拖曳與旋轉</span>
+        </div>
+
+        <!-- Tattoo Customization Toolbar -->
+        <div class="w-full bg-white rounded-2xl p-4 shadow-sm border border-stone-100 space-y-3">
+            
+            <!-- Sticker Selector -->
+            <div>
+                <span class="text-xs font-medium text-stone-500 block mb-2">選擇浪漫貼圖</span>
+                <div class="flex gap-3 overflow-x-auto no-scrollbar py-1">
+                    <button class="btn-sticker shrink-0 w-10 h-10 rounded-xl bg-cream border border-stone-200 flex items-center justify-center hover:bg-stone-100 active:scale-90 transition" data-shape="heart">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </button>
+                    <button class="btn-sticker shrink-0 w-10 h-10 rounded-xl bg-cream border border-stone-200 flex items-center justify-center hover:bg-stone-100 active:scale-90 transition" data-shape="infinity">
+                        <span class="text-lg font-bold">∞</span >
+                    </button>
+                    <button class="btn-sticker shrink-0 w-10 h-10 rounded-xl bg-cream border border-stone-200 flex items-center justify-center hover:bg-stone-100 active:scale-90 transition" data-shape="star">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </button>
+                    <button class="btn-sticker shrink-0 w-10 h-10 rounded-xl bg-cream border border-stone-200 flex items-center justify-center hover:bg-stone-100 active:scale-90 transition" data-shape="anchor">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3c0 1.31.83 2.42 2 2.83V11H8a1 1 0 0 0 0 2h3v6.05A7.002 7.002 0 0 1 5 13a1 1 0 1 0-2 0 9 9 0 0 0 8 8.94V22h2v-.06A9 9 0 0 0 21 13a1 1 0 1 0-2 0 7.002 7.002 0 0 1-6 6.05V13h3a1 1 0 1 0 0-2h-3V7.83A3.001 3.001 0 0 0 15 5a3 3 0 0 0-3-3zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                    </button>
+                    <button class="btn-sticker shrink-0 w-10 h-10 rounded-xl bg-cream border border-stone-200 flex items-center justify-center hover:bg-stone-100 active:scale-90 transition" data-shape="moon">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.3 2a10 10 0 0 0-1.9 20 10 10 0 0 0 8.7-5 1 1 0 0 0-1-1.5 7 7 0 1 1-5.8-13.2 1 1 0 0 0 0-1.8z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Text Input & Color Palette -->
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <div class="col-span-7 flex gap-1">
+                    <input type="text" id="input-tattoo-text" placeholder="輸入文字 (如 2026.10)" maxlength="15" class="w-full px-3 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-1 focus:ring-morandiPink bg-cream/30">
+                    <button id="btn-add-text" class="px-2.5 py-1.5 bg-stone-700 text-white text-xs rounded-lg shrink-0">新增</button>
+                </div>
+
+                <!-- Color Options -->
+                <div class="col-span-5 flex justify-end gap-1.5 items-center">
+                    <button class="btn-color w-6 h-6 rounded-full bg-tattooBlack ring-2 ring-offset-1 ring-stone-400" data-color="#212529"></button>
+                    <button class="btn-color w-6 h-6 rounded-full bg-tattooGreen" data-color="#1E3A2B"></button>
+                    <button class="btn-color w-6 h-6 rounded-full bg-tattooRed" data-color="#6B2D2D"></button>
+                    <button class="btn-color w-6 h-6 rounded-full bg-tattooBlue" data-color="#1D2A44"></button>
+                </div>
+            </div>
+
+            <!-- Action Tools (Delete selected object) -->
+            <div class="flex justify-between items-center pt-1 border-t border-stone-100">
+                <button id="btn-delete" class="text-xs text-rose-500 flex items-center gap-1 opacity-50 cursor-not-allowed" disabled>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    刪除選取圖案
+                </button>
+                <button id="btn-clear-all" class="text-xs text-stone-400 hover:text-stone-600">清空畫布</button>
+            </div>
+        </div>
+
+        <!-- Finish & Export Button -->
+        <button id="btn-export" class="w-full py-3.5 bg-gradient-to-r from-stone-800 to-stone-700 text-white font-medium rounded-2xl shadow-md transition active:scale-95 flex items-center justify-center gap-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h0.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            完成並生成 Instagram 拍立得紀念卡
+        </button>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-3 text-center text-[10px] text-stone-400">
+        Made with ♡ for lovers • Single File H5 Game
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- State Management ---
+        const state = {
+            partnerA: 'Alex',
+            partnerB: 'Chloe',
+            currentColor: '#212529',
+            tattoos: [], // Array of tattoo objects on canvas
+            selectedId: null,
+            isDragging: false,
+            dragOffset: { x: 0, y: 0 }
+        };
+
+        // --- DOM Elements ---
+        const pageWelcome = document.getElementById('page-welcome');
+        const pageMain = document.getElementById('page-main');
+        const btnStart = document.getElementById('btn-start');
+        const inputPartnerA = document.getElementById('input-partner-a');
+        const inputPartnerB = document.getElementById('input-partner-b');
+        const displayNameA = document.getElementById('display-name-a');
+        const displayNameB = document.getElementById('display-name-b');
+        const cardDate = document.getElementById('card-date');
+        
+        const canvas = document.getElementById('tattoo-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const btnDelete = document.getElementById('btn-delete');
+        const btnClearAll = document.getElementById('btn-clear-all');
+        const btnAddText = document.getElementById('btn-add-text');
+        const inputTattooText = document.getElementById('input-tattoo-text');
+        const btnExport = document.getElementById('btn-export');
+
+        // Set Current Date on Card
+        const today = new Date();
+        cardDate.textContent = `${today.getFullYear()}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getDate().toString().padStart(2, '0')}`;
+
+        // --- Step 1: Page Navigation & Setup ---
+        btnStart.addEventListener('click', () => {
+            state.partnerA = inputPartnerA.value.trim() || 'Partner A';
+            state.partnerB = inputPartnerB.value.trim() || 'Partner B';
+
+            displayNameA.textContent = state.partnerA;
+            displayNameB.textContent = state.partnerB;
+
+            pageWelcome.classList.add('hidden');
+            pageMain.classList.remove('hidden');
+            pageMain.classList.add('flex');
+
+            initCanvas();
+        });
+
+        // --- Step 2: SVG Ankle Vector Background Generation ---
+        // Generates an elegant Morandi-toned pair of ankles via SVG Data URL
+        function createAnklesSVGDataUrl() {
+            const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+                <defs>
+                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#F7F4EF" />
+                        <stop offset="100%" stop-color="#EAE3D9" />
+                    </linearGradient>
+                    <linearGradient id="skinGradA" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#F5E0D3" />
+                        <stop offset="100%" stop-color="#E8C8B5" />
+                    </linearGradient>
+                    <linearGradient id="skinGradB" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ECCFB8" />
+                        <stop offset="100%" stop-color="#DDB298" />
+                    </linearGradient>
+                    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+                        <feDropShadow dx="0" dy="12" stdDeviation="15" flood-color="#5C4D41" flood-opacity="0.12"/>
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#bgGrad)"/>
+                
+                <!-- Left Ankle (Partner A) -->
+                <g filter="url(#softShadow)">
+                    <!-- Leg & Heel Contour -->
+                    <path d="M180 -20 C 220 180, 210 260, 190 340 C 170 410, 130 460, 90 520 C 130 550, 240 560, 310 500 C 340 450, 330 380, 310 320 C 300 280, 320 180, 340 -20 Z" fill="url(#skinGradA)" />
+                    <!-- Ankle Bone Highlight (Lateral Malleolus) -->
+                    <ellipse cx="255" cy="330" rx="16" ry="24" fill="#FFFFFF" opacity="0.3" transform="rotate(-15 255 330)"/>
+                    <ellipse cx="255" cy="330" rx="20" ry="28" fill="#D3A58C" opacity="0.25" transform="rotate(-15 255 330)"/>
+                </g>
+
+                <!-- Right Ankle (Partner B) -->
+                <g filter="url(#softShadow)">
+                    <!-- Leg & Heel Contour overlapping -->
+                    <path d="M460 -20 C 480 180, 490 270, 480 330 C 470 390, 440 450, 430 520 C 480 550, 580 540, 660 480 C 670 420, 630 370, 600 310 C 580 270, 580 180, 600 -20 Z" fill="url(#skinGradB)" />
+                    <!-- Ankle Bone Highlight -->
+                    <ellipse cx="535" cy="330" rx="16" ry="24" fill="#FFFFFF" opacity="0.3" transform="rotate(15 535 330)"/>
+                    <ellipse cx="535" cy="330" rx="20" ry="28" fill="#C59378" opacity="0.25" transform="rotate(15 535 330)"/>
+                </g>
+
+                <!-- Subtle Decorative Divider Line -->
+                <path d="M400 100 L400 500" stroke="#D8C4B6" stroke-width="1" stroke-dasharray="6 6" opacity="0.4"/>
+            </svg>`;
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+
+        let bgImage = new Image();
+
+        function initCanvas() {
+            // High DPI Canvas setup
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = rect.height * 2;
+            
+            bgImage.src = createAnklesSVGDataUrl();
+            bgImage.onload = () => {
+                renderCanvas();
+            };
+        }
+
+        // --- Step 3: Render Loop ---
+        function renderCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Ankle Background
+            if (bgImage.complete) {
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+            }
+
+            // 2. Draw Tattoos
+            state.tattoos.forEach(tattoo => {
+                ctx.save();
+                ctx.translate(tattoo.x, tattoo.y);
+                ctx.rotate(tattoo.rotation || 0);
+                ctx.scale(tattoo.scale || 1, tattoo.scale || 1);
+
+                ctx.fillStyle = tattoo.color;
+                ctx.strokeStyle = tattoo.color;
+                ctx.lineWidth = 3;
+
+                if (tattoo.type === 'text') {
+                    ctx.font = '600 28px "Caveat", cursive, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    // Skin blending effect (slightly reduced opacity for tattoo feel)
+                    ctx.globalAlpha = 0.85;
+                    ctx.fillText(tattoo.content, 0, 0);
+                } else if (tattoo.type === 'shape') {
+                    ctx.globalAlpha = 0.82;
+                    drawPathShape(ctx, tattoo.content);
+                }
+
+                // Selection Box Indicator
+                if (tattoo.id === state.selectedId) {
+                    ctx.globalAlpha = 1.0;
+                    ctx.strokeStyle = '#D8C4B6';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4, 4]);
+                    const bounds = tattoo.bounds || { w: 60, h: 60 };
+                    ctx.strokeRect(-bounds.w / 2 - 8, -bounds.h / 2 - 8, bounds.w + 16, bounds.h + 16);
+                }
+
+                ctx.restore();
+            });
+
+            // Update Delete Button State
+            if (state.selectedId !== null) {
+                btnDelete.disabled = false;
+                btnDelete.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btnDelete.disabled = true;
+                btnDelete.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Vector Tattoo Shapes Drawing Helper
+        function drawPathShape(ctx, shape) {
+            ctx.beginPath();
+            if (shape === 'heart') {
+                ctx.scale(1.5, 1.5);
+                ctx.path2D = new Path2D("M0 8 C-10 -5, -20 5, 0 20 C20 5, 10 -5, 0 8 Z");
+                // Simplified Heart centered
+                ctx.beginPath();
+                ctx.moveTo(0, 10);
+                ctx.bezierCurveTo(-15, -5, -25, 15, 0, 30);
+                ctx.bezierCurveTo(25, 15, 15, -5, 0, 10);
+                ctx.fill();
+            } else if (shape === 'infinity') {
+                ctx.font = 'bold 42px "Noto Sans TC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('∞', 0, -2);
+            } else if (shape === 'star') {
+                ctx.font = '32px "Noto Sans TC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('★', 0, 0);
+            } else if (shape === 'anchor') {
+                ctx.font = '32px "Noto Sans TC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('⚓', 0, 0);
+            } else if (shape === 'moon') {
+                ctx.font = '32px "Noto Sans TC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🌙', 0, 0);
+            }
+        }
+
+        // --- Step 4: Adding Tattoos & Interactions ---
+        function addTattoo(type, content) {
+            const newTattoo = {
+                id: Date.now(),
+                type: type,
+                content: content,
+                x: canvas.width / 2 + (Math.random() * 60 - 30),
+                y: canvas.height / 2 + (Math.random() * 60 - 30),
+                color: state.currentColor,
+                scale: 1,
+                rotation: 0,
+                bounds: { w: 60, h: 40 }
+            };
+            state.tattoos.push(newTattoo);
+            state.selectedId = newTattoo.id;
+            renderCanvas();
+        }
+
+        // Sticker Click Handlers
+        document.querySelectorAll('.btn-sticker').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const shape = btn.getAttribute('data-shape');
+                addTattoo('shape', shape);
+            });
+        });
+
+        // Custom Text Handler
+        btnAddText.addEventListener('click', () => {
+            const val = inputTattooText.value.trim();
+            if (val) {
+                addTattoo('text', val);
+                inputTattooText.value = '';
+            }
+        });
+
+        // Color Selection
+        document.querySelectorAll('.btn-color').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('ring-2', 'ring-offset-1', 'ring-stone-400'));
+                btn.classList.add('ring-2', 'ring-offset-1', 'ring-stone-400');
+                
+                state.currentColor = btn.getAttribute('data-color');
+                
+                // If a tattoo is currently selected, update its color
+                if (state.selectedId !== null) {
+                    const selected = state.tattoos.find(t => t.id === state.selectedId);
+                    if (selected) {
+                        selected.color = state.currentColor;
+                        renderCanvas();
+                    }
+                }
+            });
+        });
+
+        // Delete & Clear All Handlers
+        btnDelete.addEventListener('click', () => {
+            if (state.selectedId !== null) {
+                state.tattoos = state.tattoos.filter(t => t.id !== state.selectedId);
+                state.selectedId = null;
+                renderCanvas();
+            }
+        });
+
+        btnClearAll.addEventListener('click', () => {
+            state.tattoos = [];
+            state.selectedId = null;
+            renderCanvas();
+        });
+
+        // --- Step 5: Touch & Drag Interaction Logic ---
+        function getCanvasCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function isHit(tattoo, coords) {
+            const dx = coords.x - tattoo.x;
+            const dy = coords.y - tattoo.y;
+            return Math.sqrt(dx * dx + dy * dy) < 45; // Hit radius
+        }
+
+        // Pointer Down
+        function handleStart(e) {
+            const coords = getCanvasCoordinates(e);
+            let hitFound = false;
+
+            // Check from top to bottom
+            for (let i = state.tattoos.length - 1; i >= 0; i--) {
+                const tattoo = state.tattoos[i];
+                if (isHit(tattoo, coords)) {
+                    state.selectedId = tattoo.id;
+                    state.isDragging = true;
+                    state.dragOffset = {
+                        x: coords.x - tattoo.x,
+                        y: coords.y - tattoo.y
+                    };
+                    hitFound = true;
+                    break;
+                }
+            }
+
+            if (!hitFound) {
+                state.selectedId = null;
+            }
+
+            renderCanvas();
+        }
+
+        // Pointer Move
+        function handleMove(e) {
+            if (!state.isDragging || state.selectedId === null) return;
+            e.preventDefault();
+
+            const coords = getCanvasCoordinates(e);
+            const selected = state.tattoos.find(t => t.id === state.selectedId);
+            
+            if (selected) {
+                selected.x = coords.x - state.dragOffset.x;
+                selected.y = coords.y - state.dragOffset.y;
+                renderCanvas();
+            }
+        }
+
+        // Pointer End
+        function handleEnd() {
+            state.isDragging = false;
+        }
+
+        // Event Listeners for Canvas
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+
+        canvas.addEventListener('touchstart', handleStart, { passive: false });
+        canvas.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
+
+        // --- Step 6: Export & Generate Polaroid Screenshot ---
+        btnExport.addEventListener('click', async () => {
+            // Unselect object before capturing
+            state.selectedId = null;
+            renderCanvas();
+
+            const polaroidCard = document.getElementById('polaroid-card');
+            
+            btnExport.textContent = '正在生成紀念圖片...';
+            btnExport.disabled = true;
+
+            try {
+                const screenshotCanvas = await html2canvas(polaroidCard, {
+                    scale: 3, // High definition
+                    useCORS: true,
+                    backgroundColor: null,
+                    logging: false
+                });
+
+                // Create Download Link / Modal
+                const imageUrl = screenshotCanvas.toDataURL('image/png');
+                
+                const link = document.createElement('a');
+                link.download = `Tattoos_on_your_feet_${state.partnerA}_${state.partnerB}.png`;
+                link.href = imageUrl;
+                link.click();
+
+                btnExport.innerHTML = `
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    已下載拍立得卡片！
+                `;
+                
+                setTimeout(() => {
+                    btnExport.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h0.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        重新生成拍立得紀念卡
+                    `;
+                    btnExport.disabled = false;
+                }, 3000);
+
+            } catch (err) {
+                console.error('Export failed:', err);
+                alert('圖片生成失敗，請再試一次。');
+                btnExport.textContent = '完成並生成 Instagram 拍立得紀念卡';
+                btnExport.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
